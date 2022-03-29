@@ -1,272 +1,306 @@
-package ca.exp.soundboard.rewrite.gui;
+package ca.exp.soundboard.rewrite.gui
 
-import ca.exp.soundboard.rewrite.soundboard.Soundboard;
-import ca.exp.soundboard.rewrite.soundboard.SoundboardEntry;
-import ca.exp.soundboard.rewrite.soundboard.Utils;
-import org.jnativehook.GlobalScreen;
-import org.jnativehook.keyboard.NativeKeyEvent;
-import org.jnativehook.keyboard.NativeKeyListener;
+import ca.exp.soundboard.rewrite.soundboard.Soundboard
+import ca.exp.soundboard.rewrite.soundboard.SoundboardEntry
+import ca.exp.soundboard.rewrite.soundboard.Utils
+import org.jnativehook.GlobalScreen
+import org.jnativehook.keyboard.NativeKeyEvent
+import org.jnativehook.keyboard.NativeKeyListener
+import java.awt.Color
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import java.io.File
+import java.util.*
+import javax.swing.*
+import javax.swing.filechooser.FileFilter
 
-import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.io.File;
-import java.util.ArrayList;
+class SoundboardEntryEditor(
+    private var soundboardframe: SoundboardFrame
+) : JFrame() {
 
-public class SoundboardEntryEditor extends JFrame {
-    private static final long serialVersionUID = -8420285054567246768L;
-    public int[] keyNums;
-    SoundboardFrame soundboardframe;
-    Soundboard soundboard;
-    SoundboardEntry soundboardEntry = null;
-    File soundfile;
-    private JTextField keysTextField;
-    private NativeKeyInputGetter inputGetter;
-    private JLabel selectedSoundClipLabel;
+    lateinit var keyNums: IntArray
+    private val inputGetter: NativeKeyInputGetter
+    private val keysTextField: JTextField
+    private val selectedSoundClipLabel: JLabel
+    private var soundboard: Soundboard = SoundboardFrame.soundboard
+    private var soundboardEntry: SoundboardEntry? = null
+    private var soundfile: File? = null
 
-    public SoundboardEntryEditor(SoundboardFrame soundboardframe) {
-        this.soundboardframe = soundboardframe;
-        this.soundboard = SoundboardFrame.soundboard;
-        this.inputGetter = new NativeKeyInputGetter();// new NativeKeyInputGetter(null);
+    constructor(soundboardFrame: SoundboardFrame, entry: SoundboardEntry) : this(soundboardFrame) {
+        soundfile = File(entry.fileString)
 
-        setDefaultCloseOperation(2);
-        setTitle("SoundboardStage Entry Editor");
-        setIconImage(SoundboardFrame.icon);
+        keyNums = entry.activationKeysNumbers
+        selectedSoundClipLabel.text = entry.fileString
+        keysTextField.text = entry.activationKeysAsReadableString
 
-        JLabel lblSoundClip = new JLabel("Sound clip:");
+        pack()
+    }
 
-        this.selectedSoundClipLabel = new JLabel("None selected");
+    init {
+        inputGetter = NativeKeyInputGetter()
+        selectedSoundClipLabel = JLabel("None selected")
+        defaultCloseOperation = DISPOSE_ON_CLOSE
+        iconImage = SoundboardFrame.icon
+        title = "SoundboardStage Entry Editor"
 
-        JButton btnSelect = new JButton("Select");
-        btnSelect.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                JFileChooser filechooser = Utils.getFileChooser();
-                filechooser.setMultiSelectionEnabled(true);
-                filechooser.setFileFilter(
-                        // new SoundboardEntryEditor.AudioClipFileFilter(SoundboardEntryEditor.this,
-                        // null));
-                        new SoundboardEntryEditor.AudioClipFileFilter());
-                int session = filechooser.showDialog(null, "Select");
-                if (session == 0) {
-                    File[] selected = filechooser.getSelectedFiles();
-                    if (selected.length > 1) {
-                        SoundboardEntryEditor.this.multiAdd(selected);
-                    } else {
-                        SoundboardEntryEditor.this.soundfile = selected[0];
-                    }
-                    filechooser.setMultiSelectionEnabled(false);
-                    if (Utils.isFileSupported(SoundboardEntryEditor.this.soundfile)) {
-                        SoundboardEntryEditor.this.selectedSoundClipLabel
-                                .setText(SoundboardEntryEditor.this.soundfile.getAbsolutePath());
-                    } else {
-                        SoundboardEntryEditor.this.soundfile = null;
-                        JOptionPane.showMessageDialog(null,
-                                SoundboardEntryEditor.this.soundfile.getName() + " uses an unsupported codec format.",
-                                "Unsupported Format", 0);
-                    }
-                }
-                filechooser.setMultiSelectionEnabled(false);
-                SoundboardEntryEditor.this.pack();
+        val btnDone = JButton("Done").apply { addActionListener { submit() } }
+        val btnSelect = JButton("Select")
+        val groupLayout = GroupLayout(contentPane)
+        val lblMacroKeys = JLabel("HotKeys:")
+        val lblRightclickTo = JLabel("* Right-click to clear hotkeys")
+        val lblSoundClip = JLabel("Sound clip:")
+        val jSeparator = JSeparator()
+
+        btnSelect.addActionListener {
+            val filechooser = Utils.getFileChooser().apply {
+                isMultiSelectionEnabled = true
+                fileFilter = AudioClipFileFilter()
             }
 
-        });
-        JSeparator separator = new JSeparator();
+            val session = filechooser.showDialog(null, "Select")
+            if (session == 0) {
+                val selected = filechooser.selectedFiles
+                if (selected.size > 1) {
+                    multiAdd(selected)
+                } else {
+                    soundfile = selected[0]
+                }
 
-        JLabel lblMacroKeys = new JLabel("HotKeys:");
+                filechooser.isMultiSelectionEnabled = false
 
-        this.keysTextField = new JTextField();
-        this.keysTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                if (e.getButton() == 1) {
-                    SoundboardEntryEditor.this.keysTextField.setBackground(Color.CYAN);
-                    //GlobalScreen.getInstance().addNativeKeyListener(SoundboardEntryEditor.this.inputGetter);
-                    GlobalScreen.addNativeKeyListener(SoundboardEntryEditor.this.inputGetter);
-                    SoundboardEntryEditor.this.inputGetter.clearPressedKeys();
-                } else if (e.getButton() == 3) {
-                    SoundboardEntryEditor.this.keysTextField.setBackground(Color.WHITE);
-                    //GlobalScreen.getInstance().removeNativeKeyListener(SoundboardEntryEditor.this.inputGetter);
-                    GlobalScreen.removeNativeKeyListener(SoundboardEntryEditor.this.inputGetter);
-                    SoundboardEntryEditor.this.inputGetter.clearPressedKeys();
-                    SoundboardEntryEditor.this.keyNums = new int[0];
-                    SoundboardEntryEditor.this.keysTextField.setText("none");
+                if (Utils.isFileSupported(soundfile)) {
+                    selectedSoundClipLabel.text = soundfile!!.absolutePath
+                } else {
+                    soundfile = null
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "${soundfile!!.name} uses an unsupported codec format.",
+                        "Unsupported Format",
+                        JOptionPane.ERROR_MESSAGE
+                    )
                 }
             }
-        });
-        this.keysTextField.setText("none");
-        this.keysTextField.setEditable(false);
-        this.keysTextField.setColumns(10);
 
-        JButton btnDone = new JButton("Done");
-        btnDone.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                SoundboardEntryEditor.this.submit();
-            }
+            filechooser.isMultiSelectionEnabled = false
+            pack()
+        }
 
-        });
-        JLabel lblRightclickTo = new JLabel("* Right-click to clear hotkeys");
-        GroupLayout groupLayout = new GroupLayout(getContentPane());
-        groupLayout.setHorizontalGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                .addGroup(groupLayout.createSequentialGroup().addContainerGap().addGroup(groupLayout
-                        .createParallelGroup(GroupLayout.Alignment.LEADING).addComponent(separator, -1, 414, 32767)
-                        .addComponent(this.selectedSoundClipLabel, -1, 414, 32767)
-                        .addGroup(groupLayout.createSequentialGroup().addComponent(lblSoundClip)
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(btnSelect))
-                        .addComponent(lblMacroKeys).addComponent(this.keysTextField, -1, 414, 32767)
-                        .addGroup(GroupLayout.Alignment.TRAILING,
-                                groupLayout.createSequentialGroup().addComponent(lblRightclickTo)
+        keysTextField = JTextField().apply {
+            text = "none"
+            isEditable = false
+            columns = 10
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    if (e.button == 1) {
+                        background = Color.CYAN
+                        GlobalScreen.addNativeKeyListener(inputGetter)
+                        inputGetter.clearPressedKeys()
+                    } else if (e.button == 3) {
+                        background = Color.WHITE
+                        GlobalScreen.removeNativeKeyListener(inputGetter)
+                        inputGetter.clearPressedKeys()
+                        keyNums = IntArray(0)
+                        text = "none"
+                    }
+                }
+            })
+        }
+
+        groupLayout.setHorizontalGroup(
+            groupLayout
+                .createParallelGroup(GroupLayout.Alignment.LEADING)
+                .addGroup(
+                    groupLayout
+                        .createSequentialGroup()
+                        .addContainerGap()
+                        .addGroup(
+                            groupLayout
+                                .createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addComponent(jSeparator, -1, 414, 32767)
+                                .addComponent(this.selectedSoundClipLabel, -1, 414, 32767)
+                                .addGroup(
+                                    groupLayout
+                                        .createSequentialGroup()
+                                        .addComponent(lblSoundClip)
+                                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                                        .addComponent(btnSelect)
+                                )
+                                .addComponent(lblMacroKeys)
+                                .addComponent(this.keysTextField, -1, 414, 32767)
+                                .addGroup(
+                                    GroupLayout.Alignment.TRAILING,
+                                    groupLayout
+                                        .createSequentialGroup()
+                                        .addComponent(lblRightclickTo)
                                         .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED, 311, 32767)
-                                        .addComponent(btnDone)))
-                        .addContainerGap()));
+                                        .addComponent(btnDone)
+                                )
+                        )
+                        .addContainerGap()
+                )
+        )
 
         groupLayout
-                .setVerticalGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addGroup(groupLayout.createSequentialGroup().addContainerGap()
-                                .addGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                                        .addComponent(lblSoundClip).addComponent(btnSelect))
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(this.selectedSoundClipLabel).addGap(13)
-                                .addComponent(separator, -2, -1, -2)
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(lblMacroKeys)
-                                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(this.keysTextField, -2, -1, -2).addGap(19)
-                                .addGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                                        .addComponent(btnDone).addComponent(lblRightclickTo))
-                                .addContainerGap(-1, 32767)));
+            .setVerticalGroup(
+                groupLayout
+                    .createParallelGroup(GroupLayout.Alignment.LEADING)
+                    .addGroup(
+                        groupLayout
+                            .createSequentialGroup()
+                            .addContainerGap()
+                            .addGroup(
+                                groupLayout
+                                    .createParallelGroup(GroupLayout.Alignment.BASELINE)
+                                    .addComponent(lblSoundClip)
+                                    .addComponent(btnSelect)
+                            )
+                            .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(this.selectedSoundClipLabel).addGap(13)
+                            .addComponent(jSeparator, -2, -1, -2)
+                            .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(lblMacroKeys)
+                            .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                            .addComponent(this.keysTextField, -2, -1, -2)
+                            .addGap(19)
+                            .addGroup(
+                                groupLayout
+                                    .createParallelGroup(GroupLayout.Alignment.BASELINE)
+                                    .addComponent(btnDone)
+                                    .addComponent(lblRightclickTo)
+                            )
+                            .addContainerGap(-1, 32767)
+                    )
+            )
 
-        getContentPane().setLayout(groupLayout);
-        getContentPane().addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent arg0) {
-                SoundboardEntryEditor.this.keysTextField.setBackground(Color.WHITE);
-                //GlobalScreen.getInstance().removeNativeKeyListener(SoundboardEntryEditor.this.inputGetter);
-                GlobalScreen.removeNativeKeyListener(SoundboardEntryEditor.this.inputGetter);
+        contentPane.layout = groupLayout
+        contentPane.addMouseListener(object : MouseAdapter() {
+            override fun mouseClicked(arg0: MouseEvent) {
+                keysTextField.background = Color.WHITE
+                GlobalScreen.removeNativeKeyListener(inputGetter)
             }
-        });
-        pack();
-        setLocationRelativeTo(soundboardframe);
-        setVisible(true);
+        })
+
+        pack()
+        setLocationRelativeTo(soundboardframe)
+        isVisible = true
     }
 
-    public SoundboardEntryEditor(SoundboardFrame soundboardframe, SoundboardEntry entry) {
-        this(soundboardframe);
+    private fun submit() {
+        if (soundfile == null)
+            return
 
-        this.soundfile = new File(entry.getFileString());
-        this.keyNums = entry.activationKeysNumbers;
-        this.selectedSoundClipLabel.setText(entry.getFileString());
-        this.keysTextField.setText(entry.getActivationKeysAsReadableString());
-        pack();
-    }
-
-    private void submit() {
-        if (this.soundfile != null) {
-            if (this.soundboardEntry == null) {
-                this.soundboard.addEntry(this.soundfile, this.keyNums);
-                this.soundboardframe.updateSoundboardTable();
-            } else {
-                this.soundboardEntry.setFile(this.soundfile);
-                this.soundboardEntry.setActivationKeys(this.keyNums);
-                this.soundboardframe.updateSoundboardTable();
-            }
-        }
-        dispose();
-    }
-
-    private void multiAdd(File[] files) {
-        File[] arrayOfFile;
-
-        int j = (arrayOfFile = files).length;
-        for (int i = 0; i < j; i++) {
-            File file = arrayOfFile[i];
-            this.soundboard.addEntry(file, null);
-        }
-        this.soundboardframe.updateSoundboardTable();
-        dispose();
-    }
-
-    public void dispose() {
-        super.dispose();
-        //GlobalScreen.getInstance().removeNativeKeyListener(this.inputGetter);
-        GlobalScreen.removeNativeKeyListener(this.inputGetter);
-    }
-
-    private class NativeKeyInputGetter implements NativeKeyListener {
-        int pressedKeys = 0;
-        ArrayList<Integer> pressedKeyNums = new ArrayList<Integer>();
-        ArrayList<String> pressedKeyNames = new ArrayList<String>();
-
-        private NativeKeyInputGetter() {
+        if (soundboardEntry == null) {
+            soundboard.addEntry(soundfile, keyNums)
+            soundboardframe.updateSoundboardTable()
+        } else {
+            soundboardEntry!!.setFile(soundfile)
+            soundboardEntry!!.activationKeys = keyNums
+            soundboardframe.updateSoundboardTable()
         }
 
-        public void nativeKeyPressed(NativeKeyEvent e) {
-            if (this.pressedKeys <= 0) {
-                this.pressedKeyNames.clear();
-                this.pressedKeyNums.clear();
+        dispose()
+    }
+
+    private fun multiAdd(files: Array<File>) {
+        var arrayOfFile: Array<File>
+        val j = files.also { arrayOfFile = it }.size
+
+        for (i in 0 until j) {
+            val file = arrayOfFile[i]
+            soundboard.addEntry(file, null)
+        }
+
+        soundboardframe.updateSoundboardTable()
+
+        dispose()
+    }
+
+    override fun dispose() {
+        super.dispose()
+        GlobalScreen.removeNativeKeyListener(inputGetter)
+    }
+
+    private inner class NativeKeyInputGetter : NativeKeyListener {
+        var pressedKeys = 0
+        var pressedKeyNums = ArrayList<Int>()
+        var pressedKeyNames = ArrayList<String>()
+
+        override fun nativeKeyPressed(e: NativeKeyEvent) {
+            if (pressedKeys <= 0) {
+                pressedKeyNames.clear()
+                pressedKeyNums.clear()
             }
-            this.pressedKeys += 1;
-            int key = e.getKeyCode();
-            String keyname = NativeKeyEvent.getKeyText(key);
-            System.out.println("key pressed: " + key + " " + keyname);
-            for (Integer i : this.pressedKeyNums) {
-                if (i.intValue() == key) {
-                    return;
+
+            pressedKeys += 1
+
+            val key = e.keyCode
+            val keyname = NativeKeyEvent.getKeyText(key)
+
+            println("key pressed: $key $keyname")
+
+            for (i in pressedKeyNums) {
+                if (i == key) {
+                    return
                 }
             }
-            this.pressedKeyNums.add(Integer.valueOf(key));
-            this.pressedKeyNames.add(keyname);
-            updateTextField();
-            int[] macroKeys = new int[this.pressedKeyNums.size()];
-            for (int i = 0; i < macroKeys.length; i++) {
-                macroKeys[i] = this.pressedKeyNums.get(i).intValue();
+
+            pressedKeyNums.add(key)
+            pressedKeyNames.add(keyname)
+
+            updateTextField()
+
+            val macroKeys = IntArray(pressedKeyNums.size)
+            for (i in macroKeys.indices) {
+                macroKeys[i] = pressedKeyNums[i]
             }
-            SoundboardEntryEditor.this.keyNums = macroKeys;
+
+            keyNums = macroKeys
         }
 
-        public void nativeKeyReleased(NativeKeyEvent e) {
-            this.pressedKeys -= 1;
-            if (this.pressedKeys < 0) {
-                this.pressedKeys = 0;
+        override fun nativeKeyReleased(e: NativeKeyEvent) {
+            pressedKeys -= 1
+            if (pressedKeys < 0) {
+                pressedKeys = 0
             }
-            int key = e.getKeyCode();
-            this.pressedKeyNums.remove(new Integer(key));
-            this.pressedKeyNames.remove(NativeKeyEvent.getKeyText(key));
+            val key = e.keyCode
+            pressedKeyNums.remove(Integer.valueOf(key))
+            pressedKeyNames.remove(NativeKeyEvent.getKeyText(key))
         }
 
-        public void nativeKeyTyped(NativeKeyEvent arg0) {
+        override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
+        fun clearPressedKeys() {
+            pressedKeys = 0
+            pressedKeyNames.clear()
+            pressedKeyNums.clear()
         }
 
-        public void clearPressedKeys() {
-            this.pressedKeys = 0;
-            this.pressedKeyNames.clear();
-            this.pressedKeyNums.clear();
-        }
-
-        private synchronized void updateTextField() {
-            String allKeys = "";
-            for (String key : this.pressedKeyNames) {
-                allKeys = allKeys.concat(key + "+");
+        @Synchronized
+        private fun updateTextField() {
+            var allKeys = ""
+            for (key in pressedKeyNames) {
+                allKeys = "$allKeys$key+"
             }
-            allKeys = allKeys.substring(0, allKeys.length() - 1);
-            SoundboardEntryEditor.this.keysTextField.setText(allKeys);
+            allKeys = allKeys.substring(0, allKeys.length - 1)
+            keysTextField.text = allKeys
         }
     }
 
-    private class AudioClipFileFilter extends FileFilter {
-        private AudioClipFileFilter() {
-        }
-
-        public boolean accept(File file) {
-            if (file.isDirectory()) {
-                return true;
+    private class AudioClipFileFilter : FileFilter() {
+        override fun accept(file: File): Boolean {
+            if (file.isDirectory) {
+                return true
             }
-            String filename = file.getName().toLowerCase();
-            return (filename.endsWith(".wav")) || (filename.endsWith(".mp3"));
+
+            val filename = file.name.lowercase(Locale.getDefault())
+            return filename.endsWith(".wav") || filename.endsWith(".mp3")
         }
 
-        public String getDescription() {
-            return ".mp3 or uncompressed .wav";
+        override fun getDescription(): String {
+            return ".mp3 or uncompressed .wav"
         }
+    }
+
+    companion object {
+        private const val serialVersionUID = -8420285054567246768L
     }
 }

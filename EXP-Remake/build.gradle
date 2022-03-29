@@ -1,0 +1,33 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.12'
+}
+
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
+repositories {
+    mavenCentral()
+}
+
+javafx {
+    version = '11.0.2'
+    modules = ['javafx.controls', 'javafx.fxml']
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+dependencies {
+    implementation 'com.1stleg:jnativehook:2.1.0'
+    implementation 'javazoom:jlayer:1.0.1'
+    implementation 'com.googlecode.soundlibs:mp3spi:1.9.5-1'
+    implementation 'ws.schild:jave-core:2.4.0'
+    implementation 'com.googlecode.soundlibs:tritonus-share:0.3.7-1'
+}
+
+group = 'ca.exp.soundboard.remake'
+description = 'EXP-Soundboard/Remake'
+

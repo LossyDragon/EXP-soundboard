@@ -1,9 +1,17 @@
 package ca.exp.soundboard.rewrite.converter;
 
-import it.sauronsoftware.jave.*;
+
+import ws.schild.jave.Encoder;
+import ws.schild.jave.EncoderException;
+import ws.schild.jave.MultimediaObject;
+import ws.schild.jave.encode.AudioAttributes;
+import ws.schild.jave.encode.EncodingAttributes;
+import ws.schild.jave.progress.EncoderProgressListener;
 
 import javax.swing.*;
 import java.io.File;
+import java.net.MalformedURLException;
+import java.util.ArrayList;
 
 public class AudioConverter {
     private static final String mp3 = "libmp3lame";
@@ -20,10 +28,14 @@ public class AudioConverter {
                 // int j = (arrayOfFile = AudioConverter.this).length;
                 int j = (arrayOfFile = inputfiles).length;
                 for (int i = 0; i < j; i++) {
-                    File input = arrayOfFile[i];
-                    File output = AudioConverter.getAbsoluteForOutputExtensionAndFolder(input, outputfolder, ".mp3");
-                    System.out.println("processing: " + output.getAbsolutePath());
-                    AudioConverter.mp3(input, output, listener);
+                    try {
+                        File input = arrayOfFile[i];
+                        File output = AudioConverter.getAbsoluteForOutputExtensionAndFolder(input, outputfolder, ".mp3");
+                        System.out.println("processing: " + output.getAbsolutePath());
+                        AudioConverter.mp3(input, output, listener);
+                    } catch (MalformedURLException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         })
@@ -39,10 +51,14 @@ public class AudioConverter {
                 // int j = (arrayOfFile = AudioConverter.this).length;
                 int j = (arrayOfFile = inputfiles).length;
                 for (int i = 0; i < j; i++) {
-                    File input = arrayOfFile[i];
-                    File output = AudioConverter.getAbsoluteForOutputExtensionAndFolder(input, outputfolder, ".wav");
-                    System.out.println("processing: " + output.getAbsolutePath());
-                    AudioConverter.wav(input, output, listener);
+                    try {
+                        File input = arrayOfFile[i];
+                        File output = AudioConverter.getAbsoluteForOutputExtensionAndFolder(input, outputfolder, ".wav");
+                        System.out.println("processing: " + output.getAbsolutePath());
+                        AudioConverter.wav(input, output, listener);
+                    } catch (MalformedURLException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         })
@@ -54,39 +70,48 @@ public class AudioConverter {
         new Thread(new Runnable() {
             public void run() {
                 // AudioConverter.mp3(AudioConverter.this, outputfile, listener);
-                AudioConverter.mp3(inputfile, outputfile, listener);
+                try {
+                    AudioConverter.mp3(inputfile, outputfile, listener);
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
             }
-        })
-
-                .start();
+        }).start();
     }
 
     public static void convertToWAV(File inputfile, final File outputfile, final EncoderProgressListener listener) {
         new Thread(new Runnable() {
             public void run() {
                 // AudioConverter.wav(AudioConverter.this, outputfile, listener);
-                AudioConverter.wav(inputfile, outputfile, listener);
+                try {
+                    AudioConverter.wav(inputfile, outputfile, listener);
+                } catch (MalformedURLException e) {
+                    e.printStackTrace();
+                }
             }
-        })
-
-                .start();
+        }).start();
     }
 
-    private static void mp3(File inputfile, File outputfile, EncoderProgressListener listener) {
+    private static void mp3(File inputfile, File outputfile, EncoderProgressListener listener) throws MalformedURLException {
+        ArrayList<MultimediaObject> multis = new ArrayList<>();
+        EncodingAttributes ea = new EncodingAttributes();
+
         AudioAttributes audio = new AudioAttributes();
         audio.setCodec("libmp3lame");
         audio.setBitRate(mp3bitrate);
         audio.setChannels(channels);
         audio.setSamplingRate(samplerate);
-        EncodingAttributes attrs = new EncodingAttributes();
-        attrs.setFormat("mp3");
-        attrs.setAudioAttributes(audio);
+        ea.setOutputFormat("mp3");
+        ea.setAudioAttributes(audio);
         Encoder encoder = new Encoder();
+
+        multis.add(new MultimediaObject(inputfile.toURI().toURL()));
+
         try {
             if (listener != null) {
-                encoder.encode(inputfile, outputfile, attrs, listener);
+                encoder.encode(multis, outputfile, ea, listener);
             } else {
-                encoder.encode(inputfile, outputfile, attrs);
+                encoder.encode(multis, outputfile, ea);
             }
         } catch (IllegalArgumentException | EncoderException e) {
             JOptionPane.showMessageDialog(null,
@@ -97,18 +122,23 @@ public class AudioConverter {
         }
     }
 
-    private static void wav(File inputfile, File outputfile, EncoderProgressListener listener) {
+    private static void wav(File inputfile, File outputfile, EncoderProgressListener listener) throws MalformedURLException {
+        ArrayList<MultimediaObject> multis = new ArrayList<>();
+        EncodingAttributes ea = new EncodingAttributes();
+
         AudioAttributes audio = new AudioAttributes();
         audio.setCodec("pcm_s16le");
-        EncodingAttributes attrs = new EncodingAttributes();
-        attrs.setFormat("wav");
-        attrs.setAudioAttributes(audio);
+        ea.setOutputFormat("wav");
+        ea.setAudioAttributes(audio);
         Encoder encoder = new Encoder();
+
+        multis.add(new MultimediaObject(inputfile.toURI().toURL()));
+
         try {
             if (listener != null) {
-                encoder.encode(inputfile, outputfile, attrs, listener);
+                encoder.encode(multis, outputfile, ea, listener);
             } else {
-                encoder.encode(inputfile, outputfile, attrs);
+                encoder.encode(multis, outputfile, ea);
             }
         } catch (IllegalArgumentException | EncoderException e) {
             JOptionPane.showMessageDialog(null,

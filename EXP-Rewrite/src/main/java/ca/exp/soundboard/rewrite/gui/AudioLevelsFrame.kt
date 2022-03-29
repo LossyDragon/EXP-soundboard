@@ -1,146 +1,183 @@
-package ca.exp.soundboard.rewrite.gui;
+package ca.exp.soundboard.rewrite.gui
 
-import ca.exp.soundboard.rewrite.soundboard.AudioManager;
-import ca.exp.soundboard.rewrite.soundboard.Utils;
+import ca.exp.soundboard.rewrite.soundboard.AudioManager
+import ca.exp.soundboard.rewrite.soundboard.Utils
+import java.awt.Color
+import javax.swing.*
 
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import java.awt.*;
+class AudioLevelsFrame : JFrame() {
 
-public class AudioLevelsFrame extends JFrame {
-    private static final long serialVersionUID = 464347549019590824L;
-    private static AudioLevelsFrame instance = null;
-    private JSlider primarySlider;
-    private JSlider secondarySlider;
-    private JSlider micinjectorSlider;
+    private val primarySlider: JSlider
+    private val secondarySlider: JSlider
+    private val micinjectorSlider: JSlider
 
-    private AudioLevelsFrame() {
-        setTitle("Audio Gain Controls");
-        setResizable(false);
-        setDefaultCloseOperation(2);
-        setIconImage(SoundboardFrame.icon);
+    init {
+        title = "Audio Gain Controls"
+        isResizable = false
+        defaultCloseOperation = 2
+        iconImage = SoundboardFrame.icon
 
-        JLabel lblPrimaryOutputGain = new JLabel("Primary Output Gain:");
+        val jSeparator = JSeparator().apply { foreground = Color.BLACK }
+        val lblMicInjectorGain = JLabel("Mic Injector Gain:")
+        val lblPrimaryOutputGain = JLabel("Primary Output Gain:")
+        val lblSecondaryOutputGain = JLabel("Secondary Output Gain:")
+        val separator = JSeparator().apply { foreground = Color.BLACK }
 
-        int primaryGain = (int) AudioManager.getFirstOutputGain();
-        int secondaryGain = (int) AudioManager.getSecondOutputGain();
-        int micInjectorGain = (int) Utils.getMicInjectorGain();
+        val micInjectorGain = Utils.getMicInjectorGain().toInt()
+        val primaryGain = AudioManager.getFirstOutputGain().toInt()
+        val secondaryGain = AudioManager.getSecondOutputGain().toInt()
 
-        this.primarySlider = new JSlider();
-        this.primarySlider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent e) {
-                if (!AudioLevelsFrame.this.primarySlider.getValueIsAdjusting()) {
-                    float gain = AudioLevelsFrame.this.primarySlider.getValue();
-                    AudioManager.setFirstOutputGain(gain);
+        primarySlider = JSlider().apply {
+            majorTickSpacing = 6
+            maximum = 6
+            minimum = -66
+            minorTickSpacing = 1
+            paintLabels = true
+            paintTicks = true
+            snapToTicks = true
+            value = 0
+            addChangeListener {
+                if (!valueIsAdjusting) {
+                    val gain = value.toFloat()
+                    AudioManager.setFirstOutputGain(gain)
                 }
             }
-        });
-        this.primarySlider.setMajorTickSpacing(6);
-        this.primarySlider.setPaintLabels(true);
-        this.primarySlider.setPaintTicks(true);
-        this.primarySlider.setSnapToTicks(true);
-        this.primarySlider.setMinorTickSpacing(1);
-        this.primarySlider.setValue(0);
-        this.primarySlider.setMinimum(-66);
-        this.primarySlider.setMaximum(6);
-
-        JSeparator separator = new JSeparator();
-        separator.setForeground(Color.BLACK);
-
-        JLabel lblSecondaryOutputGain = new JLabel("Secondary Output Gain:");
-
-        this.secondarySlider = new JSlider();
-        this.secondarySlider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent arg0) {
-                if (!AudioLevelsFrame.this.secondarySlider.getValueIsAdjusting()) {
-                    float gain = AudioLevelsFrame.this.secondarySlider.getValue();
-                    AudioManager.setSecondOutputGain(gain);
-                }
-            }
-        });
-        this.secondarySlider.setValue(0);
-        this.secondarySlider.setSnapToTicks(true);
-        this.secondarySlider.setPaintTicks(true);
-        this.secondarySlider.setPaintLabels(true);
-        this.secondarySlider.setMinorTickSpacing(1);
-        this.secondarySlider.setMinimum(-66);
-        this.secondarySlider.setMaximum(6);
-        this.secondarySlider.setMajorTickSpacing(6);
-
-        JSeparator separator_1 = new JSeparator();
-        separator_1.setForeground(Color.BLACK);
-
-        JLabel lblMicInjectorGain = new JLabel("Mic Injector Gain:");
-
-        this.micinjectorSlider = new JSlider();
-        this.micinjectorSlider.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent arg0) {
-                if (!AudioLevelsFrame.this.micinjectorSlider.getValueIsAdjusting()) {
-                    float gain = AudioLevelsFrame.this.micinjectorSlider.getValue();
-                    Utils.setMicInjectorGain(gain);
-                }
-            }
-        });
-        this.micinjectorSlider.setValue(0);
-        this.micinjectorSlider.setSnapToTicks(true);
-        this.micinjectorSlider.setPaintTicks(true);
-        this.micinjectorSlider.setPaintLabels(true);
-        this.micinjectorSlider.setMinorTickSpacing(1);
-        this.micinjectorSlider.setMinimum(-66);
-        this.micinjectorSlider.setMaximum(6);
-        this.micinjectorSlider.setMajorTickSpacing(6);
-        GroupLayout groupLayout = new GroupLayout(getContentPane());
-        groupLayout.setHorizontalGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                .addGroup(groupLayout.createSequentialGroup()
-                        .addGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                                .addGroup(groupLayout.createSequentialGroup().addContainerGap()
-                                        .addGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                                                .addComponent(separator, -1, 424, 32767)
-                                                .addComponent(this.primarySlider, -1, 424, 32767)
-                                                .addComponent(lblPrimaryOutputGain).addComponent(lblSecondaryOutputGain)
-                                                .addComponent(this.secondarySlider, -2, 424, -2)))
-                                .addGroup(groupLayout.createSequentialGroup().addGap(11).addComponent(separator_1, -1,
-                                        423, 32767))
-                                .addGroup(groupLayout.createSequentialGroup().addContainerGap()
-                                        .addComponent(lblMicInjectorGain))
-                                .addGroup(groupLayout.createSequentialGroup().addContainerGap()
-                                        .addComponent(this.micinjectorSlider, -2, 424, -2)))
-                        .addContainerGap()));
-
-        groupLayout.setVerticalGroup(groupLayout.createParallelGroup(GroupLayout.Alignment.LEADING).addGroup(groupLayout
-                .createSequentialGroup().addContainerGap().addComponent(lblPrimaryOutputGain)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(this.primarySlider, -2, -1, -2)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(separator, -2, 2, -2)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(lblSecondaryOutputGain)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(this.secondarySlider, -2, 45, -2)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(separator_1, -2, 2, -2)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED).addComponent(lblMicInjectorGain)
-                .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                .addComponent(this.micinjectorSlider, -2, 45, -2).addContainerGap(38, 32767)));
-
-        getContentPane().setLayout(groupLayout);
-
-        this.primarySlider.setValue(primaryGain);
-        this.secondarySlider.setValue(secondaryGain);
-        this.micinjectorSlider.setValue(micInjectorGain);
-
-        pack();
-        setVisible(true);
-    }
-
-    public static AudioLevelsFrame getInstance() {
-        if (instance == null) {
-            instance = new AudioLevelsFrame();
-        } else {
-            instance.setVisible(true);
-            instance.requestFocus();
         }
-        return instance;
+
+        secondarySlider = JSlider().apply {
+            majorTickSpacing = 6
+            maximum = 6
+            minimum = -66
+            minorTickSpacing = 1
+            paintLabels = true
+            paintTicks = true
+            snapToTicks = true
+            value = 0
+            addChangeListener {
+                if (!valueIsAdjusting) {
+                    val gain = value.toFloat()
+                    AudioManager.setSecondOutputGain(gain)
+                }
+            }
+        }
+
+        micinjectorSlider = JSlider().apply {
+            majorTickSpacing = 6
+            maximum = 6
+            minimum = -66
+            minorTickSpacing = 1
+            paintLabels = true
+            paintTicks = true
+            snapToTicks = true
+            value = 0
+            addChangeListener {
+                if (!valueIsAdjusting) {
+                    val gain = value.toFloat()
+                    Utils.setMicInjectorGain(gain)
+                }
+            }
+        }
+
+        val groupLayout = GroupLayout(contentPane)
+        groupLayout.setHorizontalGroup(
+            groupLayout
+                .createParallelGroup(GroupLayout.Alignment.LEADING)
+                .addGroup(
+                    groupLayout
+                        .createSequentialGroup()
+                        .addGroup(
+                            groupLayout
+                                .createParallelGroup(GroupLayout.Alignment.LEADING)
+                                .addGroup(
+                                    groupLayout
+                                        .createSequentialGroup()
+                                        .addContainerGap()
+                                        .addGroup(
+                                            groupLayout
+                                                .createParallelGroup(GroupLayout.Alignment.LEADING)
+                                                .addComponent(separator, -1, 424, 32767)
+                                                .addComponent(primarySlider, -1, 424, 32767)
+                                                .addComponent(lblPrimaryOutputGain)
+                                                .addComponent(lblSecondaryOutputGain)
+                                                .addComponent(secondarySlider, -2, 424, -2)
+                                        )
+                                )
+                                .addGroup(
+                                    groupLayout
+                                        .createSequentialGroup()
+                                        .addGap(11)
+                                        .addComponent(jSeparator, -1, 423, 32767)
+                                )
+                                .addGroup(
+                                    groupLayout
+                                        .createSequentialGroup()
+                                        .addContainerGap()
+                                        .addComponent(lblMicInjectorGain)
+                                )
+                                .addGroup(
+                                    groupLayout
+                                        .createSequentialGroup()
+                                        .addContainerGap()
+                                        .addComponent(micinjectorSlider, -2, 424, -2)
+                                )
+                        )
+                        .addContainerGap()
+                )
+        )
+        groupLayout.setVerticalGroup(
+            groupLayout
+                .createParallelGroup(GroupLayout.Alignment.LEADING)
+                .addGroup(
+                    groupLayout
+                        .createSequentialGroup()
+                        .addContainerGap()
+                        .addComponent(lblPrimaryOutputGain)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(primarySlider, -2, -1, -2)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(separator, -2, 2, -2)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lblSecondaryOutputGain)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(secondarySlider, -2, 45, -2)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(jSeparator, -2, 2, -2)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(lblMicInjectorGain)
+                        .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(micinjectorSlider, -2, 45, -2)
+                        .addContainerGap(38, 32767)
+                )
+        )
+
+        contentPane.layout = groupLayout
+        primarySlider.value = primaryGain
+        secondarySlider.value = secondaryGain
+        micinjectorSlider.value = micInjectorGain
+
+        pack()
+        isVisible = true
     }
 
-    public void dispose() {
-        super.dispose();
-        instance = null;
+    override fun dispose() {
+        super.dispose()
+        instance = null
+    }
+
+    companion object {
+        private const val serialVersionUID = 464347549019590824L
+
+        private var instance: AudioLevelsFrame? = null
+
+        val instanceOf: AudioLevelsFrame
+            get() {
+                if (instance == null) {
+                    instance = AudioLevelsFrame()
+                } else {
+                    instance!!.isVisible = true
+                    instance!!.requestFocus()
+                }
+                return instance!!
+            }
     }
 }

@@ -1,641 +1,618 @@
-package ca.exp.soundboard.rewrite.gui;
+package ca.exp.soundboard.rewrite.gui
 
-import ca.exp.soundboard.rewrite.converter.ConverterFrame;
-import ca.exp.soundboard.rewrite.soundboard.*;
-import com.apple.eawt.Application;
-import com.google.gson.Gson;
-import exp.soundboard.*;
-import net.miginfocom.swing.MigLayout;
-import org.jnativehook.GlobalScreen;
+import ca.exp.soundboard.rewrite.converter.ConverterFrame
+import ca.exp.soundboard.rewrite.soundboard.*
+import com.apple.eawt.Application
+import com.google.gson.Gson
+import net.miginfocom.swing.MigLayout
+import org.jnativehook.GlobalScreen
+import java.awt.Color
+import java.awt.Desktop
+import java.awt.Dimension
+import java.awt.Image
+import java.awt.event.WindowAdapter
+import java.awt.event.WindowEvent
+import java.io.File
+import java.net.URI
+import java.util.*
+import java.util.logging.Level
+import java.util.logging.LogManager
+import java.util.logging.Logger
+import javax.swing.*
+import javax.swing.filechooser.FileFilter
+import javax.swing.table.DefaultTableModel
+import kotlin.system.exitProcess
 
-import javax.swing.*;
-import javax.swing.filechooser.FileFilter;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableColumnModel;
-import java.awt.*;
-import java.awt.event.*;
-import java.io.File;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.prefs.Preferences;
+class SoundboardFrame : JFrame() {
 
-public class SoundboardFrame extends JFrame {
-    public static final float VERSION = 0.5F;
-    public static final Image icon = new ImageIcon(SoundboardFrame.class.getResource("EXP logo.png")).getImage();
-    private static final long serialVersionUID = 8934802095461138592L;
-    public static Soundboard soundboard;
-    public static GlobalKeyMacroListener macroListener;
-    public static String micInjectorInputMixerName = "";
-    public static String micInjectorOutputMixerName = "";
-    public static boolean useMicInjector = false;
-    public static JFileChooser filechooser;
-    static boolean updateCheck;
-    final SoundboardFrame thisFrameInstance;
-    private final String title = "EXP SoundboardStage vers. 0.5 | ";
-    private final String useSecondaryKey = "useSecondSpeaker";
-    private final String firstSpeakerKey = "firstSpeaker";
-    private final String secondSpeakerKey = "secondSpeaker";
-    private final String lastSoundboardFileKey = "lastSoundboardUsed";
-    private final String stopallKeyKey = "stopAllKey";
-    private final String modPlaybackSpeedKey = "modplaybackspeed";
-    private final String modPlaybackSpeedKeyKey = "slowSoundKey";
-    private final String modSpeedIncKeyKey = "modSpeedIncKey";
-    private final String modSpeedDecKeyKey = "modSpeedDecKey";
-    private final String updateCheckKey = "updateCheckOnLaunch";
-    private final String micInjectorInputKey = "micInjectorInput";
-    private final String micInjectorOutputKey = "micInjectorOutput";
-    private final String micInjectorEnabledKey = "micInjectorEnabled";
-    private final String primaryOutputGainKey = "primaryOutputGain";
-    private final String secondaryOutputGainKey = "secondaryOutputGain";
-    private final String micInjectorOutputGainKey = "micInjectorOutputGain";
-    private final String autoPPTenabledKey = "autoPPTenabled";
-    private final String autoPPTKeysKey = "autoPTTkeys";
-    private final String overlapClipsKey = "OverlapClipsWhilePlaying";
-    private final String OVERLAPSWITCHKEYKEY = "OverlapClipsKey";
-    public AudioManager audioManager;
-    public File testFile;
-    private JComboBox<String> secondarySpeakerComboBox;
-    private JComboBox<String> primarySpeakerComboBox;
-    private JTable table;
-    private JCheckBox useSecondaryCheckBox;
-    private File currentSoundboardFile = null;
+    private lateinit var thisFrameInstance: SoundboardFrame
+    private val autoPptCheckBox: JCheckBox
+    private val menuBar: JMenuBar = JMenuBar()
+    private val primarySpeakerComboBox: JComboBox<String?>
+    private val secondarySpeakerComboBox: JComboBox<String?>
+    private val table: JTable
+    private val useMicInjectorCheckBox: JCheckBox
+    private val useSecondaryCheckBox: JCheckBox
+    private var currentSoundboardFile: File? = null
 
-    private JCheckBox useMicInjectorCheckBox;
+    @JvmField
+    var audioManager: AudioManager
 
-    private JMenuBar menuBar;
+    private val selectedEntryIndex: Int
+        get() = table.getValueAt(table.selectedRow, 2) as Int
 
-    private JCheckBox autoPptCheckBox;
+    private val settingsMenu: Unit
+        get() = SettingsFrame.instanceOf.setLocationRelativeTo(this)
 
-    public SoundboardFrame() {
-        addWindowListener(new WindowAdapter() {
-
-            public void windowClosing(WindowEvent e) {
-                SoundboardFrame.this.exit();
+    init {
+        addWindowListener(object : WindowAdapter() {
+            override fun windowClosing(e: WindowEvent) {
+                exit()
             }
-        });
+        })
+
         try {
-            UIManager.LookAndFeelInfo[] arrayOfLookAndFeelInfo;
-            int j = (arrayOfLookAndFeelInfo = UIManager.getInstalledLookAndFeels()).length;
-            for (int i = 0; i < j; i++) {
-                UIManager.LookAndFeelInfo info = arrayOfLookAndFeelInfo[i];
-                if ("Nimbus".equals(info.getName())) {
-                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-                    break;
+            var arrayOfLookAndFeelInfo: Array<UIManager.LookAndFeelInfo>
+            val j = (UIManager.getInstalledLookAndFeels().also { arrayOfLookAndFeelInfo = it }).size
+            for (i in 0 until j) {
+                val info = arrayOfLookAndFeelInfo[i]
+                if (("Nimbus" == info.name)) {
+                    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName())
+                    break
                 }
             }
-        } catch (ClassNotFoundException ex) {
-            Logger.getLogger(SoundboardFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (InstantiationException ex) {
-            Logger.getLogger(SoundboardFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (IllegalAccessException ex) {
-            Logger.getLogger(SoundboardFrame.class.getName()).log(Level.SEVERE, null, ex);
-        } catch (UnsupportedLookAndFeelException ex) {
-            Logger.getLogger(SoundboardFrame.class.getName()).log(Level.SEVERE, null, ex);
+        } catch (ex: Exception) {
+            when (ex) {
+                is IllegalAccessException,
+                is InstantiationException,
+                is UnsupportedLookAndFeelException,
+                is ClassNotFoundException ->
+                    Logger.getLogger(SoundboardFrame::class.java.name).log(Level.SEVERE, null, ex)
+            }
         }
-        filechooser = new JFileChooser();
-        this.audioManager = new AudioManager();
-        soundboard = new Soundboard();
-        setDefaultCloseOperation(3);
-        setTitle("EXP SoundboardStage vers. 0.5 | ");
-        setIconImage(icon);
 
-        macInit();
+        audioManager = AudioManager()
+        filechooser = JFileChooser()
+        soundboard = Soundboard()
 
-        this.secondarySpeakerComboBox = new JComboBox();
-        this.secondarySpeakerComboBox.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == 1) {
-                    String name = (String) SoundboardFrame.this.secondarySpeakerComboBox.getSelectedItem();
-                    SoundboardFrame.this.audioManager.setSecondaryOutputMixer(name);
+        icon = ImageIcon(SoundboardFrame::class.java.classLoader.getResource("EXP logo.png")).image
+        iconImage = icon
+
+        title = appTitle
+        defaultCloseOperation = 3
+
+        macInit()
+
+        secondarySpeakerComboBox = JComboBox<String?>().apply {
+            addItemListener { e ->
+                if (e.stateChange == 1) {
+                    val name = selectedItem as String
+                    audioManager.setSecondaryOutputMixer(name)
+                }
+            }
+        }
+
+        primarySpeakerComboBox = JComboBox<String?>().apply {
+            addItemListener { e ->
+                if (e.stateChange == 1) {
+                    val name = selectedItem as String
+                    audioManager.setPrimaryOutputMixer(name)
+                }
+            }
+        }
+
+        useSecondaryCheckBox = JCheckBox("Use").apply {
+            addActionListener {
+                audioManager.setUseSecondary(this.isSelected)
+            }
+        }
+
+        useMicInjectorCheckBox = JCheckBox("Use Mic Injector (see Option -> Settings)").apply {
+            addActionListener {
+                useMicInjector = this.isSelected
+                updateMicInjector()
+            }
+        }
+
+        autoPptCheckBox = JCheckBox("Auto-hold PTT key(s)").apply {
+            addActionListener {
+                val selected = this.isSelected
+                Utils.setAutoPTThold(selected)
+            }
+        }
+
+        table = JTable().apply {
+            setSelectionMode(0)
+            autoCreateRowSorter = true
+            model = object : DefaultTableModel(arrayOf(arrayOfNulls(2)), arrayOf("Sound Clip", "HotKeys")) {
+                var columnTypes: Array<Class<*>> = arrayOf(String::class.java, String::class.java)
+                var columnEditables: BooleanArray = BooleanArray(2)
+                override fun getColumnClass(columnIndex: Int): Class<*> {
+                    return columnTypes[columnIndex]
                 }
 
-            }
-        });
-        this.primarySpeakerComboBox = new JComboBox();
-        this.primarySpeakerComboBox.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == 1) {
-                    String name = (String) SoundboardFrame.this.primarySpeakerComboBox.getSelectedItem();
-                    SoundboardFrame.this.audioManager.setPrimaryOutputMixer(name);
+                override fun isCellEditable(row: Int, column: Int): Boolean {
+                    return columnEditables[column]
                 }
-
             }
-        });
-        JButton btnStop = new JButton("Stop All");
-        btnStop.addActionListener(new ActionListener() {
+        }
 
-            public void actionPerformed(ActionEvent e) {
+        contentPane.layout = MigLayout(
+            "gapx  2:4:5, gapy 2:4:5, fillx",
+            "[][][][6px][20px][6px][2px][10px][53px][6px][][24px][2px][43px]",
+            "[grow,fill][23px][14px][20px][14px][23px][2px][23px]"
+        )
+
+        val btnStop = JButton("Stop All").apply {
+            addActionListener {
+                // TODO
             }
+        }
 
-        });
-        this.useSecondaryCheckBox = new JCheckBox("Use");
-        this.useSecondaryCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                SoundboardFrame.this.audioManager
-                        .setUseSecondary(SoundboardFrame.this.useSecondaryCheckBox.isSelected());
+        val btnAdd = JButton("Add").apply {
+            addActionListener {
+                SoundboardEntryEditor(thisFrameInstance)
             }
+        }
 
-        });
-        JScrollPane scrollPane = new JScrollPane();
+        val lblstOutputeg = JLabel("1st Output (e.g. your speakers)").apply {
+            foreground = Color.DARK_GRAY
+        }
 
-        JButton btnAdd = new JButton("Add");
-        btnAdd.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new SoundboardEntryEditor(SoundboardFrame.this.thisFrameInstance);
-            }
+        val lblndOutputeg = JLabel("2nd Output (e.g. virtual audio cable \"input\")(optional)").apply {
+            foreground = Color.DARK_GRAY
+        }
 
-        });
-        this.useMicInjectorCheckBox = new JCheckBox("Use Mic Injector (see Option -> Settings)");
-        this.useMicInjectorCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                SoundboardFrame.useMicInjector = SoundboardFrame.this.useMicInjectorCheckBox.isSelected();
-                SoundboardFrame.this.updateMicInjector();
-            }
+        val scrollPane = JScrollPane().apply {
+            setViewportView(table)
+        }
 
-        });
-        JLabel lblstOutputeg = new JLabel("1st Output (e.g. your speakers)");
-        lblstOutputeg.setForeground(Color.DARK_GRAY);
-
-        JLabel lblndOutputeg = new JLabel("2nd Output (e.g. virtual audio cable \"input\")(optional)");
-        lblndOutputeg.setForeground(Color.DARK_GRAY);
-
-        JSeparator separator_4 = new JSeparator();
-
-        this.autoPptCheckBox = new JCheckBox("Auto-hold PTT key(s)");
-        this.autoPptCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                boolean selected = SoundboardFrame.this.autoPptCheckBox.isSelected();
-                Utils.setAutoPTThold(selected);
-            }
-
-        });
-        this.table = new JTable();
-        this.table.setSelectionMode(0);
-        this.table.setAutoCreateRowSorter(true);
-        this.table.setModel(new DefaultTableModel(new Object[][]{new Object[2]},
-
-                new String[]{"Sound Clip", "HotKeys"}) {
-            private static final long serialVersionUID = 1L;
-
-            Class[] columnTypes = {String.class, String.class};
-            boolean[] columnEditables = new boolean[2];
-
-            public Class getColumnClass(int columnIndex) {
-                return this.columnTypes[columnIndex];
-            }
-
-            public boolean isCellEditable(int row, int column) {
-                return this.columnEditables[column];
-            }
-        });
-        scrollPane.setViewportView(this.table);
-        getContentPane().setLayout(new MigLayout("gapx  2:4:5, gapy 2:4:5, fillx",
-                "[][][][6px][20px][6px][2px][10px][53px][6px][][24px][2px][43px]",
-                "[grow,fill][23px][14px][20px][14px][23px][2px][23px]"));
-
-        JButton btnRemove = new JButton("Remove");
-        btnRemove.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                int selected = SoundboardFrame.this.table.getSelectedRow();
+        val buttonRemove = JButton("Remove").apply {
+            addActionListener {
+                val selected = table.selectedRow
                 if (selected > -1) {
-                    int index = SoundboardFrame.this.getSelectedEntryIndex();
-                    SoundboardFrame.soundboard.removeEntry(index);
-                    SoundboardFrame.this.updateSoundboardTable();
-                    if (index >= SoundboardFrame.this.table.getRowCount()) {
-                        index--;
+                    var index = selectedEntryIndex
+                    soundboard.removeEntry(index)
+                    updateSoundboardTable()
+                    if (index >= table.rowCount) {
+                        index--
                     }
                     if (index >= 0) {
-                        SoundboardFrame.this.table.setRowSelectionInterval(index, index);
+                        table.setRowSelectionInterval(index, index)
                     }
                 }
             }
-        });
-        getContentPane().add(btnRemove, "cell 1 1,alignx left,aligny top");
+        }
 
-        JButton btnEdit = new JButton("Edit");
-        btnEdit.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                int selected = SoundboardFrame.this.table.getSelectedRow();
+        val buttonEdit = JButton("Edit").apply {
+            addActionListener {
+                val selected = table.selectedRow
                 if (selected > -1) {
-                    int index = SoundboardFrame.this.getSelectedEntryIndex();
-                    System.out.println("index " + index);
-                    SoundboardEntry entry = SoundboardFrame.soundboard.getEntry(index);
-                    new SoundboardEntryEditor(SoundboardFrame.this.thisFrameInstance, entry);
+                    val index = selectedEntryIndex
+                    println("index $index")
+                    val entry = soundboard.getEntry(index)
+                    SoundboardEntryEditor(thisFrameInstance, entry)
                 }
             }
-        });
-        getContentPane().add(btnEdit, "cell 2 1,alignx left,aligny top");
+        }
 
-        JButton btnPlay = new JButton("Play");
-        btnPlay.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                int selected = SoundboardFrame.this.table.getSelectedRow();
+        val buttonPlay = JButton("Play").apply {
+            addActionListener {
+                val selected = table.selectedRow
                 if (selected > -1) {
-                    int index = SoundboardFrame.this.getSelectedEntryIndex();
-                    SoundboardEntry entry = SoundboardFrame.soundboard.getEntry(index);
-                    if (SoundboardFrame.macroListener.isSpeedModKeyHeld()) {
-                        entry.play(SoundboardFrame.this.audioManager, true);
+                    val index = selectedEntryIndex
+                    val entry = soundboard.getEntry(index)
+                    if (macroListener.isSpeedModKeyHeld) {
+                        entry.play(audioManager, true)
                     } else {
-                        entry.play(SoundboardFrame.this.audioManager, false);
+                        entry.play(audioManager, false)
                     }
                 }
             }
-        });
-        getContentPane().add(btnPlay, "cell 10 1,alignx right,aligny top");
-        getContentPane().add(this.useMicInjectorCheckBox, "cell 0 7 7 1,alignx left,aligny top");
-        getContentPane().add(this.autoPptCheckBox, "cell 8 7 6 1,alignx right,aligny top");
-        getContentPane().add(separator_4, "cell 0 6 14 1,growx,aligny top");
-        getContentPane().add(scrollPane, "cell 0 0 14 1,grow");
-        getContentPane().add(this.primarySpeakerComboBox, "cell 0 3 14 1,growx,aligny top");
-        getContentPane().add(this.secondarySpeakerComboBox, "cell 0 5 12 1,growx,aligny center");
-        getContentPane().add(this.useSecondaryCheckBox, "cell 13 5,alignx left,aligny top");
-        getContentPane().add(btnAdd, "cell 0 1,alignx left,aligny top");
-        getContentPane().add(btnStop, "cell 11 1 3 1,alignx right,aligny top");
-        getContentPane().add(lblndOutputeg, "cell 0 4 7 1,alignx left,aligny top");
-        getContentPane().add(lblstOutputeg, "cell 0 2 7 1,alignx left,aligny top");
+        }
 
-        this.menuBar = new JMenuBar();
-        setJMenuBar(this.menuBar);
+        contentPane.run {
+            add(JSeparator(), "cell 0 6 14 1,growx,aligny top")
+            add(autoPptCheckBox, "cell 8 7 6 1,alignx right,aligny top")
+            add(btnAdd, "cell 0 1,alignx left,aligny top")
+            add(btnStop, "cell 11 1 3 1,alignx right,aligny top")
+            add(buttonEdit, "cell 2 1,alignx left,aligny top")
+            add(buttonPlay, "cell 10 1,alignx right,aligny top")
+            add(buttonRemove, "cell 1 1,alignx left,aligny top")
+            add(lblndOutputeg, "cell 0 4 7 1,alignx left,aligny top")
+            add(lblstOutputeg, "cell 0 2 7 1,alignx left,aligny top")
+            add(primarySpeakerComboBox, "cell 0 3 14 1,growx,aligny top")
+            add(scrollPane, "cell 0 0 14 1,grow")
+            add(secondarySpeakerComboBox, "cell 0 5 12 1,growx,aligny center")
+            add(useMicInjectorCheckBox, "cell 0 7 7 1,alignx left,aligny top")
+            add(useSecondaryCheckBox, "cell 13 5,alignx left,aligny top")
+        }
 
-        JMenu mnFile = new JMenu("File");
-        this.menuBar.add(mnFile);
-
-        JMenuItem mntmNew = new JMenuItem("New");
-        mntmNew.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                SoundboardFrame.this.fileNew();
-            }
-        });
-        mnFile.add(mntmNew);
-
-        JMenuItem mntmOpen = new JMenuItem("Open");
-        mntmOpen.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                SoundboardFrame.this.fileOpen();
-            }
-        });
-        mnFile.add(mntmOpen);
-
-        JSeparator separator = new JSeparator();
-        mnFile.add(separator);
-
-        JMenuItem mntmSave = new JMenuItem("Save");
-        mntmSave.setAccelerator(KeyStroke.getKeyStroke(83, 2));
-        mntmSave.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                SoundboardFrame.this.fileSave();
-            }
-        });
-        mnFile.add(mntmSave);
-
-        JMenuItem mntmSaveAs = new JMenuItem("Save As...");
-        mntmSaveAs.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                SoundboardFrame.this.fileSaveAs();
-            }
-        });
-        mnFile.add(mntmSaveAs);
-
-        JSeparator separator_3 = new JSeparator();
-        mnFile.add(separator_3);
-
-        JMenuItem mntmProjectPage = new JMenuItem("Sourceforge Page");
-        mntmProjectPage.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                try {
-                    Desktop.getDesktop().browse(new URI("https://sourceforge.net/projects/expsoundboard/"));
-                } catch (IOException | URISyntaxException e) {
-                    e.printStackTrace();
+        val mnFile = JMenu("File").apply {
+            add(JMenuItem("New").apply {
+                addActionListener { fileNew() }
+            })
+            add(JMenuItem("Open").apply {
+                addActionListener { fileOpen() }
+            })
+            add(JSeparator())
+            add(JMenuItem("Save").apply {
+                accelerator = KeyStroke.getKeyStroke(83, 2)
+                addActionListener { fileSave() }
+            })
+            add(JMenuItem("Save As...").apply {
+                addActionListener { fileSaveAs() }
+            })
+            add(JSeparator())
+            add(JMenuItem("Sourceforge Page").apply {
+                addActionListener {
+                    Desktop.getDesktop().browse(URI("https://sourceforge.net/projects/expsoundboard/"))
                 }
-            }
-        });
-        mnFile.add(mntmProjectPage);
+            })
+            add(JSeparator())
+            add(JMenuItem("Quit").apply { addActionListener { exit() } })
+        }
 
-        JSeparator separator_1 = new JSeparator();
-        mnFile.add(separator_1);
-
-        JMenuItem mntmQuit = new JMenuItem("Quit");
-        mntmQuit.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                SoundboardFrame.this.exit();
-            }
-        });
-        mnFile.add(mntmQuit);
-
-        JMenu mnEdit = new JMenu("Option");
-        this.menuBar.add(mnEdit);
-
-        JMenuItem mntmSettings = new JMenuItem("Settings");
-        mntmSettings.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                SoundboardFrame.this.getSettingsMenu();
-            }
-        });
-        mnEdit.add(mntmSettings);
-
-        JMenuItem mntmAudioLevels = new JMenuItem("Audio Levels");
-        mntmAudioLevels.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                AudioLevelsFrame.getInstance().setLocationRelativeTo(SoundboardFrame.this.thisFrameInstance);
-            }
-        });
-        mnEdit.add(mntmAudioLevels);
-
-        JSeparator separator_2 = new JSeparator();
-        mnEdit.add(separator_2);
-
-        JMenuItem mntmAudioConverter = new JMenuItem("Audio Converter");
-        mntmAudioConverter.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                if (!System.getProperty("os.name").toLowerCase().contains("mac")) {
-                    new ConverterFrame();
-                } else {
-                    JOptionPane.showMessageDialog(null, "Audio Converter currently not supported on Mac OS X",
-                            "Feature not supported", 1);
+        val mnOption = JMenu("Option").apply {
+            add(JMenuItem("Settings").apply {
+                addActionListener { settingsMenu }
+            })
+            add(JMenuItem("Audio Levels").apply {
+                addActionListener { AudioLevelsFrame.instanceOf.setLocationRelativeTo(thisFrameInstance) }
+            })
+            add(JSeparator())
+            add(JMenuItem("Audio Converter").apply {
+                addActionListener {
+                    val osName = System.getProperty("os.name")
+                    if (!osName.lowercase().contains("mac")) {
+                        ConverterFrame()
+                    } else {
+                        JOptionPane.showMessageDialog(
+                            null,
+                            "Audio Converter currently not supported on Mac OS X",
+                            "Feature not supported",
+                            1
+                        )
+                    }
                 }
+            })
+        }
+
+        jMenuBar = menuBar
+        menuBar.add(mnFile)
+        menuBar.add(mnOption)
+
+        minimumSize = Dimension(400, 500)
+        updateSpeakerComboBoxes()
+        pack()
+        thisFrameInstance = this
+        macroListener = GlobalKeyMacroListener(this)
+        GlobalScreen.addNativeKeyListener(macroListener)
+        setLocationRelativeTo(null)
+        loadPrefs()
+    }
+
+    fun updateSoundboardTable() {
+        val entryArray = soundboard.entriesAsObjectArrayForTable
+        val tableItems = arrayOf("Sound Clip", "HotKeys", "File Locations", "Index")
+        table.model = object : DefaultTableModel(entryArray, tableItems) {
+            var columnTypes = arrayOf(String::class.java, String::class.java, String::class.java, Integer.TYPE)
+            var columnEditables: BooleanArray = BooleanArray(4)
+
+            override fun getColumnClass(columnIndex: Int): Class<*> {
+                return columnTypes[columnIndex]
             }
-        });
-        mnEdit.add(mntmAudioConverter);
 
-        setMinimumSize(new Dimension(400, 500));
+            override fun isCellEditable(row: Int, column: Int): Boolean {
+                return columnEditables[column]
+            }
+        }
 
-        updateSpeakerComboBoxes();
-        pack();
-        this.thisFrameInstance = this;
-        macroListener = new GlobalKeyMacroListener(this);
-        // GlobalScreen.getInstance().addNativeKeyListener(macroListener);
-        GlobalScreen.addNativeKeyListener(macroListener);
-        setLocationRelativeTo(null);
-        loadPrefs();
+        val columModel = table.columnModel
+        columModel.getColumn(3).minWidth = 0
+        columModel.getColumn(3).maxWidth = 0
+        columModel.getColumn(3).width = 0
+        table.removeColumn(columModel.getColumn(2))
     }
 
-    public static void main(String[] args) {
-        Utils.initGlobalKeyLibrary();
-        Utils.startMp3Decoder();
-        new SoundboardFrame().setVisible(true);
+    private fun fileNew() {
+        Utils.stopAllClips()
+        saveReminder()
+        currentSoundboardFile = null
+        soundboard = Soundboard()
+        updateSoundboardTable()
+        title = appTitle
     }
 
-    public void updateSoundboardTable() {
-        Object[][] entryArray = soundboard.getEntriesAsObjectArrayForTable();
+    private fun fileOpen() {
+        Utils.stopAllClips()
+        saveReminder()
 
-        this.table.setModel(
-                new DefaultTableModel(entryArray, new String[]{"Sound Clip", "HotKeys", "File Locations", "Index"}) {
-                    private static final long serialVersionUID = 1L;
-
-                    Class[] columnTypes = {String.class, String.class, String.class, Integer.TYPE};
-                    boolean[] columnEditables = new boolean[4];
-
-                    public Class getColumnClass(int columnIndex) {
-                        return this.columnTypes[columnIndex];
-                    }
-
-                    public boolean isCellEditable(int row, int column) {
-                        return this.columnEditables[column];
-                    }
-                });
-        TableColumnModel columnmod = this.table.getColumnModel();
-        columnmod.getColumn(3).setMinWidth(0);
-        columnmod.getColumn(3).setMaxWidth(0);
-        columnmod.getColumn(3).setWidth(0);
-        this.table.removeColumn(columnmod.getColumn(2));
-    }
-
-    private void fileNew() {
-        Utils.stopAllClips();
-        saveReminder();
-        this.currentSoundboardFile = null;
-        soundboard = new Soundboard();
-        updateSoundboardTable();
-        setTitle("EXP SoundboardStage vers. 0.5 | ");
-    }
-
-    private void fileOpen() {
-        Utils.stopAllClips();
-        saveReminder();
         // filechooser.setFileFilter(new JsonFileFilter(null));
-        filechooser.setFileFilter(new JsonFileFilter());
-        int session = filechooser.showOpenDialog(null);
+        filechooser.fileFilter = JsonFileFilter()
+
+        val session = filechooser.showOpenDialog(null)
         if (session == 0) {
-            File jsonfile = filechooser.getSelectedFile();
-            open(jsonfile);
+            val jsonfile = filechooser.selectedFile
+            open(jsonfile)
         }
     }
 
-    private void fileSave() {
-        if (this.currentSoundboardFile != null) {
-            soundboard.saveAsJsonFile(this.currentSoundboardFile);
+    private fun fileSave() {
+        if (currentSoundboardFile != null) {
+            soundboard.saveAsJsonFile(currentSoundboardFile)
         } else {
-            fileSaveAs();
+            fileSaveAs()
         }
     }
 
-    private void fileSaveAs() {
-        JFileChooser fc = new JFileChooser();
+    private fun fileSaveAs() {
+        val fc = JFileChooser()
         // fc.setFileFilter(new JsonFileFilter(null));
-        fc.setFileFilter(new JsonFileFilter());
-        if (this.currentSoundboardFile != null) {
-            fc.setSelectedFile(this.currentSoundboardFile);
+        fc.fileFilter = JsonFileFilter()
+        if (currentSoundboardFile != null) {
+            fc.selectedFile = currentSoundboardFile
         }
-        int session = fc.showSaveDialog(null);
+        val session = fc.showSaveDialog(null)
         if (session == 0) {
-            File file = fc.getSelectedFile();
-            this.currentSoundboardFile = soundboard.saveAsJsonFile(file);
-            setTitle("EXP SoundboardStage vers. 0.5 | " + this.currentSoundboardFile.getName());
+            val file = fc.selectedFile
+            currentSoundboardFile = soundboard.saveAsJsonFile(file)
+            title = appTitle + currentSoundboardFile!!.name
         }
     }
 
-    private void getSettingsMenu() {
-        SettingsFrame.getInstanceOf().setLocationRelativeTo(this);
-    }
 
-    private void open(File jsonfile) {
+    private fun open(jsonfile: File) {
         if (jsonfile.exists()) {
-            Soundboard sb = Soundboard.loadFromJsonFile(jsonfile);
+            val sb = Soundboard.loadFromJsonFile(jsonfile)
             if (sb != null) {
-                soundboard = sb;
-                updateSoundboardTable();
-                this.currentSoundboardFile = jsonfile;
-                setTitle("EXP SoundboardStage vers. 0.5 | " + this.currentSoundboardFile.getName());
+                soundboard = sb
+                updateSoundboardTable()
+                currentSoundboardFile = jsonfile
+                title = appTitle + currentSoundboardFile!!.name
             }
         }
     }
 
-    public void updateSpeakerComboBoxes() {
-        String[] outputmixerStringArray = Utils.getMixerNames(this.audioManager.standardDataLineInfo);
-        String[] arrayOfString1;
-        int j = (arrayOfString1 = outputmixerStringArray).length;
-        for (int i = 0; i < j; i++) {
-            String speaker = arrayOfString1[i];
-            this.primarySpeakerComboBox.addItem(speaker);
-            this.secondarySpeakerComboBox.addItem(speaker);
+    private fun updateSpeakerComboBoxes() {
+        val outputmixerStringArray = Utils.getMixerNames(audioManager.standardDataLineInfo)
+        var arrayOfString1: Array<String?>
+        val j = (outputmixerStringArray.also { arrayOfString1 = it }).size
+        for (i in 0 until j) {
+            val speaker = arrayOfString1[i]
+            primarySpeakerComboBox.addItem(speaker)
+            secondarySpeakerComboBox.addItem(speaker)
         }
     }
 
-    private int getSelectedEntryIndex() {
-        int selected = this.table.getSelectedRow();
-        return ((Integer) this.table.getValueAt(selected, 2)).intValue();
-    }
-
-    public void updateMicInjector() {
-        this.useMicInjectorCheckBox.setSelected(useMicInjector);
+    private fun updateMicInjector() {
+        useMicInjectorCheckBox.isSelected = useMicInjector
         if (useMicInjector) {
-            Utils.startMicInjector(micInjectorInputMixerName, micInjectorOutputMixerName);
+            Utils.startMicInjector(micInjectorInputMixerName, micInjectorOutputMixerName)
         } else {
-            Utils.stopMicInjector();
+            Utils.stopMicInjector()
         }
     }
 
-    private void savePrefs() {
-        Preferences prefs = Utils.prefs;
-        prefs.putBoolean("useSecondSpeaker", this.useSecondaryCheckBox.isSelected());
-        prefs.put("firstSpeaker", (String) this.primarySpeakerComboBox.getSelectedItem());
-        prefs.put("secondSpeaker", (String) this.secondarySpeakerComboBox.getSelectedItem());
-        if (this.currentSoundboardFile != null) {
-            prefs.put("lastSoundboardUsed", this.currentSoundboardFile.getAbsolutePath());
+    private fun savePrefs() {
+        Utils.prefs.run {
+            put("firstSpeaker", primarySpeakerComboBox.selectedItem as String)
+            put("secondSpeaker", secondarySpeakerComboBox.selectedItem as String)
+            putBoolean("useSecondSpeaker", useSecondaryCheckBox.isSelected)
+            if (currentSoundboardFile != null) {
+                put("lastSoundboardUsed", currentSoundboardFile!!.absolutePath)
+            }
+            put("autoPTTkeys", Utils.getPTTkeys().toString())
+            put("micInjectorInput", micInjectorInputMixerName)
+            put("micInjectorOutput", micInjectorOutputMixerName)
+            putBoolean("OverlapClipsWhilePlaying", Utils.isOverlapSameClipWhilePlaying())
+            putBoolean("autoPPTenabled", Utils.autoPTThold)
+            putBoolean("micInjectorEnabled", useMicInjector)
+            putFloat("micInjectorOutputGain", Utils.getMicInjectorGain())
+            putFloat("modplaybackspeed", Utils.getModifiedPlaybackSpeed())
+            putFloat("primaryOutputGain", AudioManager.getFirstOutputGain())
+            putFloat("secondaryOutputGain", AudioManager.getSecondOutputGain())
+            putInt("OverlapClipsKey", Utils.getOverlapSwitchKey())
+            putInt("modSpeedDecKey", Utils.getModspeeddownKey())
+            putInt("modSpeedIncKey", Utils.getModspeedupKey())
+            putInt("slowSoundKey", Utils.getModifiedSpeedKey())
+            putInt("stopAllKey", Utils.getStopKey())
         }
-        prefs.putBoolean("OverlapClipsWhilePlaying", Utils.isOverlapSameClipWhilePlaying());
-        prefs.putInt("OverlapClipsKey", Utils.getOverlapSwitchKey());
-        prefs.putInt("stopAllKey", Utils.getStopKey());
-        prefs.putFloat("modplaybackspeed", Utils.getModifiedPlaybackSpeed());
-        prefs.putInt("slowSoundKey", Utils.getModifiedSpeedKey());
-        prefs.putInt("modSpeedIncKey", Utils.getModspeedupKey());
-        prefs.putInt("modSpeedDecKey", Utils.getModspeeddownKey());
-        prefs.putBoolean("updateCheckOnLaunch", updateCheck);
-        prefs.put("micInjectorInput", micInjectorInputMixerName);
-        prefs.put("micInjectorOutput", micInjectorOutputMixerName);
-        prefs.putBoolean("micInjectorEnabled", useMicInjector);
-        prefs.putBoolean("autoPPTenabled", Utils.autoPTThold);
-        prefs.put("autoPTTkeys", Utils.getPTTkeys().toString());
-
-        prefs.putFloat("primaryOutputGain", AudioManager.getFirstOutputGain());
-        prefs.putFloat("secondaryOutputGain", AudioManager.getSecondOutputGain());
-        prefs.putFloat("micInjectorOutputGain", Utils.getMicInjectorGain());
     }
 
-    private void loadPrefs() {
-        Preferences prefs = Utils.prefs;
-        boolean useSecond = prefs.getBoolean("useSecondSpeaker", false);
-        this.useSecondaryCheckBox.setSelected(useSecond);
-        this.audioManager.setUseSecondary(useSecond);
+    private fun loadPrefs() {
+        val prefs = Utils.prefs
+        val useSecond = prefs.getBoolean("useSecondSpeaker", false)
 
-        String firstspeaker = prefs.get("firstSpeaker", null);
-        String secondspeaker = prefs.get("secondSpeaker", null);
+        useSecondaryCheckBox.isSelected = useSecond
+        audioManager.setUseSecondary(useSecond)
+
+        val firstspeaker = prefs["firstSpeaker", null]
         if (firstspeaker != null) {
-            this.primarySpeakerComboBox.setSelectedItem(firstspeaker);
-            this.audioManager.setPrimaryOutputMixer(firstspeaker);
+            primarySpeakerComboBox.selectedItem = firstspeaker
+            audioManager.setPrimaryOutputMixer(firstspeaker)
         }
+
+        val secondspeaker = prefs["secondSpeaker", null]
         if (secondspeaker != null) {
-            this.secondarySpeakerComboBox.setSelectedItem(secondspeaker);
-            this.audioManager.setSecondaryOutputMixer(secondspeaker);
+            secondarySpeakerComboBox.selectedItem = secondspeaker
+            audioManager.setSecondaryOutputMixer(secondspeaker)
         }
 
-        String lastfile = prefs.get("lastSoundboardUsed", null);
+        val lastfile = prefs["lastSoundboardUsed", null]
         if (lastfile != null) {
-            open(new File(lastfile));
+            open(File(lastfile))
         }
 
-        float modSpeed = prefs.getFloat("modplaybackspeed", 0.5F);
-        Utils.setModifiedPlaybackSpeed(modSpeed);
+        val modSpeed = prefs.getFloat("modplaybackspeed", 0.5f)
+        Utils.setModifiedPlaybackSpeed(modSpeed)
 
-        int slowkey = prefs.getInt("slowSoundKey", 35);
-        Utils.setModifiedSpeedKey(slowkey);
-        int stopkey = prefs.getInt("stopAllKey", 19);
-        Utils.setStopKey(stopkey);
-        int incKey = prefs.getInt("modSpeedIncKey", 39);
-        Utils.setModspeedupKey(incKey);
-        int decKey = prefs.getInt("modSpeedDecKey", 37);
-        Utils.setModspeeddownKey(decKey);
+        val slowkey = prefs.getInt("slowSoundKey", 35)
+        Utils.setModifiedSpeedKey(slowkey)
 
-        updateCheck = prefs.getBoolean("updateCheckOnLaunch", true);
-        if (updateCheck) {
-            new Thread(new UpdateChecker()).start();
-        }
+        val stopkey = prefs.getInt("stopAllKey", 19)
+        Utils.setStopKey(stopkey)
 
-        float firstOutputGain = prefs.getFloat("primaryOutputGain", 0.0F);
-        float secondOutputGain = prefs.getFloat("secondaryOutputGain", 0.0F);
-        float micinjectorOutputGain = prefs.getFloat("micInjectorOutputGain", 0.0F);
-        AudioManager.setFirstOutputGain(firstOutputGain);
-        AudioManager.setSecondOutputGain(secondOutputGain);
-        Utils.setMicInjectorGain(micinjectorOutputGain);
+        val incKey = prefs.getInt("modSpeedIncKey", 39)
+        Utils.setModspeedupKey(incKey)
 
-        micInjectorInputMixerName = prefs.get("micInjectorInput", "");
-        micInjectorOutputMixerName = prefs.get("micInjectorOutput", "");
-        useMicInjector = prefs.getBoolean("micInjectorEnabled", false);
-        updateMicInjector();
+        val decKey = prefs.getInt("modSpeedDecKey", 37)
+        Utils.setModspeeddownKey(decKey)
 
-        boolean useautoptt = prefs.getBoolean("autoPPTenabled", false);
-        this.autoPptCheckBox.setSelected(useautoptt);
-        Utils.setAutoPTThold(useautoptt);
-        String autopttkeys = prefs.get("autoPTTkeys", null);
+        val firstOutputGain = prefs.getFloat("primaryOutputGain", 0.0f)
+        val secondOutputGain = prefs.getFloat("secondaryOutputGain", 0.0f)
+        val micinjectorOutputGain = prefs.getFloat("micInjectorOutputGain", 0.0f)
+
+        AudioManager.setFirstOutputGain(firstOutputGain)
+        AudioManager.setSecondOutputGain(secondOutputGain)
+
+        Utils.setMicInjectorGain(micinjectorOutputGain)
+
+        micInjectorInputMixerName = prefs["micInjectorInput", ""]
+        micInjectorOutputMixerName = prefs["micInjectorOutput", ""]
+        useMicInjector = prefs.getBoolean("micInjectorEnabled", false)
+
+        updateMicInjector()
+
+        val useautoptt = prefs.getBoolean("autoPPTenabled", false)
+        autoPptCheckBox.isSelected = useautoptt
+
+        Utils.setAutoPTThold(useautoptt)
+
+        val autopttkeys = prefs["autoPTTkeys", null]
         if (autopttkeys != null) {
-            ArrayList<Integer> keys = Utils.stringToIntArrayList(autopttkeys);
-            Utils.setPTTkeys(keys);
+            val keys = Utils.stringToIntArrayList(autopttkeys)
+            Utils.setPTTkeys(keys)
         }
 
-        Utils.setOverlapSameClipWhilePlaying(prefs.getBoolean("OverlapClipsWhilePlaying", true));
-        int overlapKey = prefs.getInt("OverlapClipsKey", 36);
-        Utils.setOverlapSwitchKey(overlapKey);
+        Utils.setOverlapSameClipWhilePlaying(prefs.getBoolean("OverlapClipsWhilePlaying", true))
+
+        val overlapKey = prefs.getInt("OverlapClipsKey", 36)
+        Utils.setOverlapSwitchKey(overlapKey)
     }
 
-    private void exit() {
-        Utils.stopAllClips();
-        saveReminder();
-        savePrefs();
-        dispose();
-        Utils.deregisterGlobalKeyLibrary();
-        System.exit(0);
+    private fun exit() {
+        Utils.stopAllClips()
+
+        saveReminder()
+        savePrefs()
+        dispose()
+
+        Utils.deregisterGlobalKeyLibrary()
+
+        exitProcess(0)
     }
 
-    private void saveReminder() {
-        if (this.currentSoundboardFile != null) {
-            if (this.currentSoundboardFile.exists()) {
-                Gson gson = new Gson();
-                Soundboard savedFile = Soundboard.loadFromJsonFile(this.currentSoundboardFile);
-                String savedjson = gson.toJson(savedFile);
-                String currentjson = gson.toJson(soundboard);
-                if (!savedjson.equals(currentjson)) {
-                    int option = JOptionPane.showConfirmDialog(null, "SoundboardStage has changed. Do you want to save?",
-                            "Save Reminder", 0);
+    private fun saveReminder() {
+        if (currentSoundboardFile != null) {
+            if (currentSoundboardFile!!.exists()) {
+                val gson = Gson()
+                val savedFile = Soundboard.loadFromJsonFile(currentSoundboardFile)
+                val savedjson = gson.toJson(savedFile)
+                val currentjson = gson.toJson(soundboard)
+
+                if (savedjson != currentjson) {
+                    val option = JOptionPane.showConfirmDialog(
+                        null,
+                        "SoundboardStage has changed. Do you want to save?",
+                        "Save Reminder",
+                        0
+                    )
+
                     if (option == 0) {
-                        soundboard.saveAsJsonFile(this.currentSoundboardFile);
+                        soundboard.saveAsJsonFile(currentSoundboardFile)
                     }
                 }
             }
-        } else if (soundboard.getSoundboardEntries().size() > 0) {
-            int option = JOptionPane.showConfirmDialog(null, "SoundboardStage has not been saved. Do you want to save?",
-                    "Save Reminder", 0);
+        } else if (soundboard.soundboardEntries.size > 0) {
+            val option = JOptionPane.showConfirmDialog(
+                null,
+                "SoundboardStage has not been saved. Do you want to save?",
+                "Save Reminder",
+                0
+            )
+
             if (option == 0) {
-                fileSave();
+                fileSave()
             }
         }
     }
 
-    private void macInit() {
-        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-            Application application = Application.getApplication();
-            application.setDockIconImage(icon);
-            System.setProperty("apple.laf.useScreenMenuBar", "true");
-            System.setProperty("com.apple.mrj.application.apple.menu.about.name", "EXP SoundboardStage");
+    private fun macInit() {
+        if (System.getProperty("os.name").lowercase(Locale.getDefault()).contains("mac")) {
+            Application.getApplication().apply {
+                dockIconImage = icon
+            }
+            System.setProperty("apple.laf.useScreenMenuBar", "true")
+            System.setProperty("com.apple.mrj.application.apple.menu.about.name", "EXP SoundboardStage")
         }
     }
 
-    private class JsonFileFilter extends FileFilter {
-        private JsonFileFilter() {
+    inner class JsonFileFilter : FileFilter() {
+        override fun accept(f: File): Boolean {
+            return if (f.isDirectory) {
+                true
+            } else f.name.lowercase(Locale.getDefault()).endsWith(".json")
         }
 
-        public boolean accept(File f) {
-            if (f.isDirectory()) {
-                return true;
-            }
-            return f.getName().toLowerCase().endsWith(".json");
+        override fun getDescription(): String {
+            return ".json SoundboardStage save file"
         }
+    }
 
-        public String getDescription() {
-            return ".json SoundboardStage save file";
+    companion object {
+        const val VERSION = "0.5"
+        private const val OVERLAPSWITCHKEYKEY = "OverlapClipsKey"
+        private const val appTitle = "EXP SoundboardStage vers. $VERSION | "
+        private const val autoPPTKeysKey = "autoPTTkeys"
+        private const val autoPPTenabledKey = "autoPPTenabled"
+        private const val firstSpeakerKey = "firstSpeaker"
+        private const val lastSoundboardFileKey = "lastSoundboardUsed"
+        private const val micInjectorEnabledKey = "micInjectorEnabled"
+        private const val micInjectorInputKey = "micInjectorInput"
+        private const val micInjectorOutputGainKey = "micInjectorOutputGain"
+        private const val micInjectorOutputKey = "micInjectorOutput"
+        private const val modPlaybackSpeedKey = "modplaybackspeed"
+        private const val modPlaybackSpeedKeyKey = "slowSoundKey"
+        private const val modSpeedDecKeyKey = "modSpeedDecKey"
+        private const val modSpeedIncKeyKey = "modSpeedIncKey"
+        private const val overlapClipsKey = "OverlapClipsWhilePlaying"
+        private const val primaryOutputGainKey = "primaryOutputGain"
+        private const val secondSpeakerKey = "secondSpeaker"
+        private const val secondaryOutputGainKey = "secondaryOutputGain"
+        private const val serialVersionUID = 8934802095461138592L
+        private const val stopallKeyKey = "stopAllKey"
+        private const val updateCheckKey = "updateCheckOnLaunch"
+        private const val useSecondaryKey = "useSecondSpeaker"
+
+        lateinit var icon: Image
+
+        lateinit var soundboard: Soundboard
+
+        lateinit var macroListener: GlobalKeyMacroListener
+
+        lateinit var filechooser: JFileChooser
+
+        @JvmField
+        var micInjectorInputMixerName = ""
+
+        @JvmField
+        var micInjectorOutputMixerName = ""
+
+        @JvmField
+        var useMicInjector = false
+
+        @JvmStatic
+        fun main(args: Array<String>) {
+            // https://stackoverflow.com/a/30562956/13225929
+            LogManager.getLogManager().reset()
+            val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
+            logger.level = Level.OFF
+
+            Utils.initGlobalKeyLibrary()
+            //Utils.startMp3Decoder();
+
+            SoundboardFrame().isVisible = true
         }
     }
 }

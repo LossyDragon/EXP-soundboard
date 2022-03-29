@@ -1,581 +1,504 @@
-package ca.exp.soundboard.rewrite.gui;
+package ca.exp.soundboard.rewrite.gui
 
-import ca.exp.soundboard.rewrite.soundboard.MicInjector;
-import ca.exp.soundboard.rewrite.soundboard.UpdateChecker;
-import ca.exp.soundboard.rewrite.soundboard.Utils;
-import net.miginfocom.swing.MigLayout;
-import org.jnativehook.GlobalScreen;
-import org.jnativehook.keyboard.NativeKeyEvent;
-import org.jnativehook.keyboard.NativeKeyListener;
+import ca.exp.soundboard.rewrite.soundboard.MicInjector
+import ca.exp.soundboard.rewrite.soundboard.Utils
+import net.miginfocom.swing.MigLayout
+import org.jnativehook.GlobalScreen
+import org.jnativehook.keyboard.NativeKeyEvent
+import org.jnativehook.keyboard.NativeKeyListener
+import java.awt.Color
+import java.awt.Desktop
+import java.awt.Font
+import java.awt.event.*
+import java.net.URI
+import javax.swing.*
+import javax.swing.text.DefaultFormatter
 
-import javax.swing.*;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
-import javax.swing.text.DefaultFormatter;
-import java.awt.*;
-import java.awt.event.*;
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.HashSet;
+class SettingsFrame private constructor() : JFrame() {
 
-public class SettingsFrame extends JFrame {
-    private static final long serialVersionUID = -4758092886690912749L;
-    public static SettingsFrame instance = null;
-    private JTextField stopAllTextField;
-    private StopKeyNativeKeyInputGetter stopKeyInputGetter;
-    private ModSpeedKeyNativeKeyInputGetter slowKeyInputGetter;
-    private IncKeyNativeKeyInputGetter incKeyInputGetter;
-    private DecKeyNativeKeyInputGetter decKeyInputGetter;
-    private PttKeysNativeKeyInputGetter pttKeysInputGetter;
-    private OverlapSwitchNativeKeyInputGetter fOverlapKeyInputGetter;
-    private JComboBox<String> micComboBox;
-    private JComboBox<String> vacComboBox;
-    private JTextField slowKeyTextField;
-    private JSpinner modSpeedSpinner;
-    private JTextField incModSpeedHotKeyTextField;
-    private JTextField decModSpeedHotKeyTextField;
-    private JTextField pttKeysTextField;
-    private JCheckBox fOverlapClipsCheckbox;
-    private JTextField fOverlapHotkeyTextField;
+    private val decKeyInputGetter: DecKeyNativeKeyInputGetter
+    private val decModSpeedHotKeyTextField: JTextField
+    private val fOverlapClipsCheckbox: JCheckBox
+    private val fOverlapHotkeyTextField: JTextField
+    private val fOverlapKeyInputGetter: OverlapSwitchNativeKeyInputGetter
+    private val incKeyInputGetter: IncKeyNativeKeyInputGetter
+    private val incModSpeedHotKeyTextField: JTextField
+    private val micComboBox: JComboBox<String?>
+    private val modSpeedSpinner: JSpinner
+    private val pttKeysInputGetter: PttKeysNativeKeyInputGetter
+    private val pttKeysTextField: JTextField
+    private val slowKeyInputGetter: ModSpeedKeyNativeKeyInputGetter
+    private val slowKeyTextField: JTextField
+    private val stopAllTextField: JTextField
+    private val stopKeyInputGetter: StopKeyNativeKeyInputGetter
+    private val vacComboBox: JComboBox<String?>
 
-    private SettingsFrame() {
-        getContentPane().addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent arg0) {
-                SettingsFrame.this.focusLostOnItems();
+    init {
+
+        contentPane.addMouseListener(object : MouseAdapter() {
+            override fun mousePressed(arg0: MouseEvent) {
+                focusLostOnItems()
             }
-        });
-        addWindowFocusListener(new WindowFocusListener() {
-            public void windowGainedFocus(WindowEvent arg0) {
+        })
+
+        addWindowFocusListener(object : WindowFocusListener {
+            override fun windowGainedFocus(arg0: WindowEvent) {}
+            override fun windowLostFocus(arg0: WindowEvent) {
+                focusLostOnItems()
             }
+        })
 
-            public void windowLostFocus(WindowEvent arg0) {
-                SettingsFrame.this.focusLostOnItems();
-            }
-        });
-        setResizable(false);
+        decKeyInputGetter = DecKeyNativeKeyInputGetter()
+        fOverlapKeyInputGetter = OverlapSwitchNativeKeyInputGetter()
+        incKeyInputGetter = IncKeyNativeKeyInputGetter()
+        pttKeysInputGetter = PttKeysNativeKeyInputGetter()
+        slowKeyInputGetter = ModSpeedKeyNativeKeyInputGetter()
+        stopKeyInputGetter = StopKeyNativeKeyInputGetter()
 
-        this.stopKeyInputGetter = new StopKeyNativeKeyInputGetter();// new StopKeyNativeKeyInputGetter(null);
-        this.slowKeyInputGetter = new ModSpeedKeyNativeKeyInputGetter();// new ModSpeedKeyNativeKeyInputGetter(null);
-        this.incKeyInputGetter = new IncKeyNativeKeyInputGetter();// new IncKeyNativeKeyInputGetter(null);
-        this.decKeyInputGetter = new DecKeyNativeKeyInputGetter();// new DecKeyNativeKeyInputGetter(null);
-        this.pttKeysInputGetter = new PttKeysNativeKeyInputGetter();// new PttKeysNativeKeyInputGetter(null);
-        this.fOverlapKeyInputGetter = new OverlapSwitchNativeKeyInputGetter();
-        // new OverlapSwitchNativeKeyInputGetter(null);
+        isResizable = false
+        defaultCloseOperation = 2
+        title = "Settings"
 
-        setDefaultCloseOperation(2);
-        setTitle("Settings");
-
-        JLabel lblstopAllSounds = new JLabel("'Stop All Sounds' hotkey:");
-        lblstopAllSounds.setFont(new Font("Tahoma", 1, 11));
-
-        this.stopAllTextField = new JTextField();
-        this.stopAllTextField.addFocusListener(new FocusAdapter() {
-            public void focusLost(FocusEvent arg0) {
-                // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.stopKeyInputGetter);
-                GlobalScreen.removeNativeKeyListener(SettingsFrame.this.stopKeyInputGetter);
-                SettingsFrame.this.stopAllTextField.setBackground(Color.WHITE);
-            }
-        });
-        this.stopAllTextField.setEditable(false);
-        this.stopAllTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent arg0) {
-                SettingsFrame.this.stopAllTextField.setBackground(Color.CYAN);
-                // GlobalScreen.getInstance().addNativeKeyListener(SettingsFrame.this.stopKeyInputGetter);
-                GlobalScreen.addNativeKeyListener(SettingsFrame.this.stopKeyInputGetter);
-            }
-        });
-        this.stopAllTextField.setColumns(10);
-
-        final JCheckBox chckbxCheckForUpdate = new JCheckBox("Check for update on launch.");
-        chckbxCheckForUpdate.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                SoundboardFrame.updateCheck = !SoundboardFrame.updateCheck;
-                chckbxCheckForUpdate.setSelected(SoundboardFrame.updateCheck);
-            }
-        });
-        chckbxCheckForUpdate.setSelected(SoundboardFrame.updateCheck);
-        final JButton btnCheckForUpdate = new JButton("Check for Update");
-        btnCheckForUpdate.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                if (UpdateChecker.isUpdateAvailable()) {
-                    SwingUtilities.invokeLater(new UpdateChecker());
-                } else {
-                    btnCheckForUpdate.setText("No Updates");
+        stopAllTextField = JTextField().apply {
+            columns = 10
+            isEditable = false
+            text = NativeKeyEvent.getKeyText(Utils.getStopKey())
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(arg0: FocusEvent) {
+                    // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.stopKeyInputGetter);
+                    GlobalScreen.removeNativeKeyListener(stopKeyInputGetter)
+                    background = Color.WHITE
                 }
-
-            }
-        });
-        JLabel lblExpenosa = new JLabel(" © Expenosa. 2014.");
-
-        JButton btnProjectWebsite = new JButton("Project Website");
-        btnProjectWebsite.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                try {
-                    Desktop.getDesktop().browse(new URI("https://sourceforge.net/projects/expsoundboard/"));
-                } catch (IOException e1) {
-                    e1.printStackTrace();
-                } catch (URISyntaxException e1) {
-                    e1.printStackTrace();
+            })
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(arg0: MouseEvent) {
+                    background = Color.CYAN
+                    GlobalScreen.addNativeKeyListener(stopKeyInputGetter)
                 }
-
-            }
-        });
-        JSeparator separator = new JSeparator();
-        separator.setForeground(Color.BLACK);
-
-        JSeparator separator_1 = new JSeparator();
-        separator_1.setForeground(Color.BLACK);
-
-        JLabel lblMicInjectorSettings = new JLabel("Mic Injector settings:");
-        lblMicInjectorSettings.setForeground(Color.RED);
-
-        JLabel lblMicrophone = new JLabel("Microphone:");
-
-        this.micComboBox = new JComboBox();
-
-        JLabel lblVirtualAudioCable = new JLabel("Virtual Audio Cable:");
-
-        this.vacComboBox = new JComboBox();
-
-        JLabel lblUseMicInjector = new JLabel(
-                "*Use Mic Injector when your using a virtual audio cable as your input on other software.");
-        lblUseMicInjector.setFont(new Font("Tahoma", 2, 10));
-
-        JLabel lblVersion = new JLabel("Version: 0.5");
-
-        JLabel lblhalfSpeedPlayback = new JLabel("'Modified playback speed' combo key:");
-
-        this.slowKeyTextField = new JTextField();
-        this.slowKeyTextField.addFocusListener(new FocusAdapter() {
-            public void focusLost(FocusEvent e) {
-                // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.slowKeyInputGetter);
-                GlobalScreen.removeNativeKeyListener(SettingsFrame.this.slowKeyInputGetter);
-                SettingsFrame.this.slowKeyTextField.setBackground(Color.WHITE);
-            }
-        });
-        this.slowKeyTextField.setEditable(false);
-        this.slowKeyTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent arg0) {
-                SettingsFrame.this.slowKeyTextField.setBackground(Color.CYAN);
-                // GlobalScreen.getInstance().addNativeKeyListener(SettingsFrame.this.slowKeyInputGetter);
-                GlobalScreen.addNativeKeyListener(SettingsFrame.this.slowKeyInputGetter);
-            }
-        });
-        this.slowKeyTextField.setColumns(10);
-
-        JLabel lblModifiedPlaybackSpeed = new JLabel("Modified playback speed multiplier:");
-
-        this.modSpeedSpinner = new JSpinner();
-        this.modSpeedSpinner.setModel(new SpinnerNumberModel(new Float(Utils.getModifiedPlaybackSpeed()),
-                new Float(0.1F), new Float(2.0F), new Float(0.05F)));
-        JComponent comp = this.modSpeedSpinner.getEditor();
-        JFormattedTextField field = (JFormattedTextField) comp.getComponent(0);
-        field.setEditable(false);
-        DefaultFormatter formatter = (DefaultFormatter) field.getFormatter();
-        formatter.setCommitsOnValidEdit(true);
-        this.modSpeedSpinner.addChangeListener(new ChangeListener() {
-            public void stateChanged(ChangeEvent arg0) {
-                float speed = ((Float) SettingsFrame.this.modSpeedSpinner.getValue()).floatValue();
-                if ((speed >= 0.1F) && (speed <= 2.0F)) {
-                    Utils.setModifiedPlaybackSpeed(speed);
-                }
-
-            }
-        });
-        this.incModSpeedHotKeyTextField = new JTextField();
-        this.incModSpeedHotKeyTextField.addFocusListener(new FocusAdapter() {
-            public void focusLost(FocusEvent arg0) {
-                // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.incKeyInputGetter);
-                GlobalScreen.removeNativeKeyListener(SettingsFrame.this.incKeyInputGetter);
-                SettingsFrame.this.incModSpeedHotKeyTextField.setBackground(Color.WHITE);
-            }
-        });
-        this.incModSpeedHotKeyTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent arg0) {
-                // GlobalScreen.getInstance().addNativeKeyListener(SettingsFrame.this.incKeyInputGetter);
-                GlobalScreen.addNativeKeyListener(SettingsFrame.this.incKeyInputGetter);
-                SettingsFrame.this.incModSpeedHotKeyTextField.setBackground(Color.CYAN);
-            }
-        });
-        this.incModSpeedHotKeyTextField.setEditable(false);
-        this.incModSpeedHotKeyTextField.setColumns(10);
-
-        this.decModSpeedHotKeyTextField = new JTextField();
-        this.decModSpeedHotKeyTextField.addFocusListener(new FocusAdapter() {
-            public void focusLost(FocusEvent e) {
-                SettingsFrame.this.decModSpeedHotKeyTextField.setBackground(Color.WHITE);
-                // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.decKeyInputGetter);
-                GlobalScreen.removeNativeKeyListener(SettingsFrame.this.decKeyInputGetter);
-            }
-        });
-        this.decModSpeedHotKeyTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                // GlobalScreen.getInstance().addNativeKeyListener(SettingsFrame.this.decKeyInputGetter);
-                GlobalScreen.addNativeKeyListener(SettingsFrame.this.decKeyInputGetter);
-                SettingsFrame.this.decModSpeedHotKeyTextField.setBackground(Color.CYAN);
-            }
-        });
-        this.decModSpeedHotKeyTextField.setEditable(false);
-        this.decModSpeedHotKeyTextField.setColumns(10);
-
-        JLabel lblModifierSpeedIncrement = new JLabel("Modifier speed Increment hotkey:");
-
-        JLabel lblNewLabel = new JLabel("Modifier speed Decrement hotkey:");
-
-        JLabel lblpushToTalk = new JLabel("VoIP 'Push To Talk' Key(s): ");
-        lblpushToTalk.setFont(new Font("Tahoma", 1, 11));
-
-        this.pttKeysTextField = new JTextField();
-        this.pttKeysTextField.addFocusListener(new FocusAdapter() {
-            public void focusLost(FocusEvent arg0) {
-                SettingsFrame.this.pttKeysTextField.setBackground(Color.WHITE);
-                //SettingsFrame.PttKeysNativeKeyInputGetter.access$1(SettingsFrame.this.pttKeysInputGetter);
-                SettingsFrame.this.pttKeysTextField.removeKeyListener(SettingsFrame.this.pttKeysInputGetter);
-            }
-        });
-        this.pttKeysTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent arg0) {
-                SettingsFrame.this.pttKeysTextField.removeKeyListener(SettingsFrame.this.pttKeysInputGetter);
-                SettingsFrame.this.pttKeysTextField.addKeyListener(SettingsFrame.this.pttKeysInputGetter);
-                SettingsFrame.this.pttKeysTextField.setBackground(Color.CYAN);
-            }
-        });
-        this.pttKeysTextField.setEditable(false);
-        this.pttKeysTextField.setColumns(10);
-        this.pttKeysTextField.setFocusTraversalKeysEnabled(false);
-
-        JLabel lblOverlapSameSound = new JLabel("Overlap same sound file:");
-        lblOverlapSameSound.setFont(new Font("Tahoma", 1, 11));
-
-        this.fOverlapClipsCheckbox = new JCheckBox("");
-        this.fOverlapClipsCheckbox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent arg0) {
-                boolean selected = SettingsFrame.this.fOverlapClipsCheckbox.isSelected();
-                Utils.setOverlapSameClipWhilePlaying(selected);
-            }
-        });
-        setIconImage(SoundboardFrame.icon);
-
-        String[] inputMixers = MicInjector.getMixerNames(MicInjector.targetDataLineInfo);
-        String[] outputMixers = MicInjector.getMixerNames(MicInjector.sourceDataLineInfo);
-        String[] arrayOfString1;
-        int j = (arrayOfString1 = inputMixers).length;
-        for (int i = 0; i < j; i++) {
-            String input = arrayOfString1[i];
-            this.micComboBox.addItem(input);
+            })
         }
-        j = (arrayOfString1 = outputMixers).length;
-        // for (i = 0; i < j; i++) {
-        for (int i = 0; i < j; i++) {
-            String output = arrayOfString1[i];
-            this.vacComboBox.addItem(output);
+
+        slowKeyTextField = JTextField().apply {
+            columns = 10
+            isEditable = false
+            text = NativeKeyEvent.getKeyText(Utils.getModifiedSpeedKey())
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent) {
+                    GlobalScreen.removeNativeKeyListener(slowKeyInputGetter)
+                    background = Color.WHITE
+                }
+            })
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(arg0: MouseEvent) {
+                    background = Color.CYAN
+                    GlobalScreen.addNativeKeyListener(slowKeyInputGetter)
+                }
+            })
         }
-        this.micComboBox.setSelectedItem(SoundboardFrame.micInjectorInputMixerName);
-        this.vacComboBox.setSelectedItem(SoundboardFrame.micInjectorOutputMixerName);
-        this.micComboBox.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == 1) {
-                    SettingsFrame.this.updateMicInjectorSettings();
+
+        incModSpeedHotKeyTextField = JTextField().apply {
+            columns = 10
+            isEditable = false
+            text = NativeKeyEvent.getKeyText(Utils.getModspeedupKey())
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(arg0: FocusEvent) {
+                    GlobalScreen.removeNativeKeyListener(incKeyInputGetter)
+                    background = Color.WHITE
                 }
-            }
-        });
-        this.vacComboBox.addItemListener(new ItemListener() {
-            public void itemStateChanged(ItemEvent e) {
-                if (e.getStateChange() == 1) {
-                    SettingsFrame.this.updateMicInjectorSettings();
+            })
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(arg0: MouseEvent) {
+                    GlobalScreen.addNativeKeyListener(incKeyInputGetter)
+                    background = Color.CYAN
                 }
+            })
+        }
 
+        decModSpeedHotKeyTextField = JTextField().apply {
+            columns = 10
+            isEditable = false
+            text = NativeKeyEvent.getKeyText(Utils.getModspeeddownKey())
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent) {
+                    background = Color.WHITE
+                    GlobalScreen.removeNativeKeyListener(decKeyInputGetter)
+                }
+            })
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    GlobalScreen.addNativeKeyListener(decKeyInputGetter)
+                    background = Color.CYAN
+                }
+            })
+        }
+
+        pttKeysTextField = JTextField().apply {
+            columns = 10
+            focusTraversalKeysEnabled = false
+            isEditable = false
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(arg0: FocusEvent) {
+                    background = Color.WHITE
+                    removeKeyListener(pttKeysInputGetter)
+                }
+            })
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(arg0: MouseEvent) {
+                    removeKeyListener(pttKeysInputGetter)
+                    addKeyListener(pttKeysInputGetter)
+                    background = Color.CYAN
+                }
+            })
+        }
+
+        fOverlapHotkeyTextField = JTextField().apply {
+            columns = 10
+            isEditable = false
+            text = NativeKeyEvent.getKeyText(Utils.getOverlapSwitchKey())
+            addMouseListener(object : MouseAdapter() {
+                override fun mousePressed(e: MouseEvent) {
+                    GlobalScreen.addNativeKeyListener(fOverlapKeyInputGetter)
+                    background = Color.CYAN
+                }
+            })
+            addFocusListener(object : FocusAdapter() {
+                override fun focusLost(e: FocusEvent) {
+                    background = Color.WHITE
+                    GlobalScreen.removeNativeKeyListener(fOverlapKeyInputGetter)
+                }
+            })
+        }
+
+        fOverlapClipsCheckbox = JCheckBox("").apply {
+            isSelected = Utils.isOverlapSameClipWhilePlaying()
+            addActionListener {
+                val selected = isSelected
+                Utils.setOverlapSameClipWhilePlaying(selected)
             }
-        });
-        this.stopAllTextField.setText(NativeKeyEvent.getKeyText(Utils.getStopKey()));
-        this.slowKeyTextField.setText(NativeKeyEvent.getKeyText(Utils.getModifiedSpeedKey()));
-        this.incModSpeedHotKeyTextField.setText(NativeKeyEvent.getKeyText(Utils.getModspeedupKey()));
-        this.decModSpeedHotKeyTextField.setText(NativeKeyEvent.getKeyText(Utils.getModspeeddownKey()));
-        this.pttKeysInputGetter.updateTextField();
-        this.fOverlapClipsCheckbox.setSelected(Utils.isOverlapSameClipWhilePlaying());
-        getContentPane().setLayout(new MigLayout("", "[101px][20px][45px][13px][71px][4px][34px,grow][10px][135px]",
-                "[20px][20px][20px][20px][20px][20px][21px][][2px][14px][20px][20px][13px][2px][14px][23px]"));
-        getContentPane().add(lblstopAllSounds, "cell 0 0 3 1,alignx left,aligny center");
-        getContentPane().add(lblhalfSpeedPlayback, "cell 0 1 5 1,growx,aligny center");
-        getContentPane().add(lblModifiedPlaybackSpeed, "cell 0 2 3 1,alignx left,aligny center");
-        getContentPane().add(this.stopAllTextField, "cell 6 0 3 1,growx,aligny top");
-        getContentPane().add(this.slowKeyTextField, "cell 6 1 3 1,growx,aligny top");
-        getContentPane().add(this.modSpeedSpinner, "cell 6 2 3 1,growx,aligny top");
+        }
 
-        JLabel lblOverlapSwitchHotkey = new JLabel("Overlap switch hotkey:");
-        getContentPane().add(lblOverlapSwitchHotkey, "cell 0 7 3 1");
+        modSpeedSpinner = JSpinner().apply {
+            model = SpinnerNumberModel(Utils.getModifiedPlaybackSpeed(), 0.1f, 2.0f, 0.05f)
+        }.also {
+            val comp = it.editor
+            val field = comp.getComponent(0) as JFormattedTextField
+            field.isEditable = false
+            val formatter = field.formatter as DefaultFormatter
+            formatter.commitsOnValidEdit = true
+        }
 
-        this.fOverlapHotkeyTextField = new JTextField();
-        this.fOverlapHotkeyTextField.setEditable(false);
-        getContentPane().add(this.fOverlapHotkeyTextField, "cell 6 7 3 1,growx");
-        this.fOverlapHotkeyTextField.setColumns(10);
-        this.fOverlapHotkeyTextField.addMouseListener(new MouseAdapter() {
-            public void mousePressed(MouseEvent e) {
-                // GlobalScreen.getInstance().addNativeKeyListener(SettingsFrame.this.fOverlapKeyInputGetter);
-                GlobalScreen.addNativeKeyListener(SettingsFrame.this.fOverlapKeyInputGetter);
-                SettingsFrame.this.fOverlapHotkeyTextField.setBackground(Color.CYAN);
+        modSpeedSpinner.addChangeListener {
+            val speed = (modSpeedSpinner.value as Float).toFloat()
+            if (speed in 0.1f..2.0f) {
+                Utils.setModifiedPlaybackSpeed(speed)
             }
-        });
-        this.fOverlapHotkeyTextField.addFocusListener(new FocusAdapter() {
-            public void focusLost(FocusEvent e) {
-                SettingsFrame.this.fOverlapHotkeyTextField.setBackground(Color.WHITE);
-                // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.fOverlapKeyInputGetter);
-                GlobalScreen.removeNativeKeyListener(SettingsFrame.this.fOverlapKeyInputGetter);
-            }
-        });
-        this.fOverlapHotkeyTextField.setText(NativeKeyEvent.getKeyText(Utils.getOverlapSwitchKey()));
+        }
 
-        getContentPane().add(separator, "cell 0 13 9 1,growx,aligny top");
-        getContentPane().add(chckbxCheckForUpdate, "cell 0 15 3 1,alignx left,aligny top");
-        getContentPane().add(btnProjectWebsite, "cell 4 15 3 1,alignx right,aligny top");
-        getContentPane().add(btnCheckForUpdate, "cell 8 15,alignx right,aligny top");
-        getContentPane().add(lblVersion, "cell 0 14,alignx left,aligny top");
-        getContentPane().add(lblExpenosa, "cell 8 14,alignx right,aligny top");
-        getContentPane().add(lblMicInjectorSettings, "cell 0 9,alignx left,aligny top");
-        getContentPane().add(lblMicrophone, "cell 0 10,alignx left,aligny center");
-        getContentPane().add(lblVirtualAudioCable, "cell 0 11,alignx left,aligny center");
-        getContentPane().add(this.vacComboBox, "cell 2 11 7 1,growx,aligny top");
-        getContentPane().add(this.micComboBox, "cell 2 10 7 1,growx,aligny top");
-        getContentPane().add(lblUseMicInjector, "cell 0 12 9 1,alignx left,aligny top");
-        getContentPane().add(separator_1, "cell 0 8 9 1,growx,aligny top");
-        getContentPane().add(lblNewLabel, "cell 0 4 5 1,growx,aligny center");
-        getContentPane().add(lblModifierSpeedIncrement, "cell 0 3 5 1,growx,aligny center");
-        getContentPane().add(lblpushToTalk, "cell 0 5 3 1,alignx left,aligny center");
-        getContentPane().add(lblOverlapSameSound, "cell 0 6 3 1,alignx left,growy");
-        getContentPane().add(this.fOverlapClipsCheckbox, "cell 6 6,alignx left,aligny top");
-        getContentPane().add(this.pttKeysTextField, "cell 6 5 3 1,growx,aligny top");
-        getContentPane().add(this.decModSpeedHotKeyTextField, "cell 6 4 3 1,growx,aligny top");
-        getContentPane().add(this.incModSpeedHotKeyTextField, "cell 6 3 3 1,growx,aligny top");
-        pack();
-        setVisible(true);
+        val btnProjectWebsite = JButton("Project Website").apply {
+            addActionListener {
+                Desktop.getDesktop().browse(URI("https://sourceforge.net/projects/expsoundboard/"))
+            }
+        }
+        val lblExpenosa = JLabel(" © Expenosa. 2014.")
+        val lblMicInjectorSettings = JLabel("Mic Injector settings:").apply { foreground = Color.RED }
+        val lblMicrophone = JLabel("Microphone:")
+        val lblModifiedPlaybackSpeed = JLabel("Modified playback speed multiplier:")
+        val lblModifierSpeedIncrement = JLabel("Modifier speed Increment hotkey:")
+        val lblNewLabel = JLabel("Modifier speed Decrement hotkey:")
+        val lblOverlapSameSound = JLabel("Overlap same sound file:").apply { font = Font("Tahoma", 1, 11) }
+        val lblOverlapSwitchHotkey = JLabel("Overlap switch hotkey:")
+        val lblUseMicInjector =
+            JLabel("*Use Mic Injector when your using a virtual audio cable as your input on other software.").apply {
+                font = Font("Tahoma", 2, 10)
+            }
+        val lblVersion = JLabel("Version: 0.5")
+        val lblVirtualAudioCable = JLabel("Virtual Audio Cable:")
+        val lblhalfSpeedPlayback = JLabel("'Modified playback speed' combo key:")
+        val lblpushToTalk = JLabel("VoIP 'Push To Talk' Key(s): ").apply { font = Font("Tahoma", 1, 11) }
+        val lblstopAllSounds = JLabel("'Stop All Sounds' hotkey:").apply { font = Font("Tahoma", 1, 11) }
+        val separator = JSeparator().apply { foreground = Color.BLACK }
+
+        micComboBox = JComboBox()
+        vacComboBox = JComboBox()
+        iconImage = SoundboardFrame.icon
+        pttKeysInputGetter.updateTextField()
+
+        var inputArray: Array<String?>
+        val inputMixers = MicInjector.getMixerNames(MicInjector.targetDataLineInfo)
+        val inputs = inputMixers.also { inputArray = it }.size
+        for (i in 0 until inputs) {
+            val input = inputArray[i]
+            micComboBox.addItem(input)
+        }
+        micComboBox.selectedItem = SoundboardFrame.micInjectorInputMixerName
+        micComboBox.addItemListener { e ->
+            if (e.stateChange == 1) {
+                updateMicInjectorSettings()
+            }
+        }
+
+        var outputArray: Array<String?>
+        val outputMixers = MicInjector.getMixerNames(MicInjector.sourceDataLineInfo)
+        val outputs = outputMixers.also { outputArray = it }.size
+        for (i in 0 until outputs) {
+            val output = outputArray[i]
+            vacComboBox.addItem(output)
+        }
+        vacComboBox.selectedItem = SoundboardFrame.micInjectorOutputMixerName
+        vacComboBox.addItemListener { e ->
+            if (e.stateChange == 1) {
+                updateMicInjectorSettings()
+            }
+        }
+
+        contentPane.layout = MigLayout(
+            "", "[101px][20px][45px][13px][71px][4px][34px,grow][10px][135px]",
+            "[20px][20px][20px][20px][20px][20px][21px][][2px][14px][20px][20px][13px][2px][14px][23px]"
+        )
+        contentPane.add(lblstopAllSounds, "cell 0 0 3 1,alignx left,aligny center")
+        contentPane.add(lblhalfSpeedPlayback, "cell 0 1 5 1,growx,aligny center")
+        contentPane.add(lblModifiedPlaybackSpeed, "cell 0 2 3 1,alignx left,aligny center")
+        contentPane.add(stopAllTextField, "cell 6 0 3 1,growx,aligny top")
+        contentPane.add(slowKeyTextField, "cell 6 1 3 1,growx,aligny top")
+        contentPane.add(modSpeedSpinner, "cell 6 2 3 1,growx,aligny top")
+        contentPane.add(lblOverlapSwitchHotkey, "cell 0 7 3 1")
+        contentPane.add(fOverlapHotkeyTextField, "cell 6 7 3 1,growx")
+        contentPane.add(separator, "cell 0 13 9 1,growx,aligny top")
+        contentPane.add(btnProjectWebsite, "cell 8 15,alignx right,aligny top")
+        contentPane.add(lblVersion, "cell 0 14,alignx left,aligny top")
+        contentPane.add(lblExpenosa, "cell 8 14,alignx right,aligny top")
+        contentPane.add(lblMicInjectorSettings, "cell 0 9,alignx left,aligny top")
+        contentPane.add(lblMicrophone, "cell 0 10,alignx left,aligny center")
+        contentPane.add(lblVirtualAudioCable, "cell 0 11,alignx left,aligny center")
+        contentPane.add(vacComboBox, "cell 2 11 7 1,growx,aligny top")
+        contentPane.add(micComboBox, "cell 2 10 7 1,growx,aligny top")
+        contentPane.add(lblUseMicInjector, "cell 0 12 9 1,alignx left,aligny top")
+        contentPane.add(separator, "cell 0 8 9 1,growx,aligny top")
+        contentPane.add(lblNewLabel, "cell 0 4 5 1,growx,aligny center")
+        contentPane.add(lblModifierSpeedIncrement, "cell 0 3 5 1,growx,aligny center")
+        contentPane.add(lblpushToTalk, "cell 0 5 3 1,alignx left,aligny center")
+        contentPane.add(lblOverlapSameSound, "cell 0 6 3 1,alignx left,growy")
+        contentPane.add(fOverlapClipsCheckbox, "cell 6 6,alignx left,aligny top")
+        contentPane.add(pttKeysTextField, "cell 6 5 3 1,growx,aligny top")
+        contentPane.add(decModSpeedHotKeyTextField, "cell 6 4 3 1,growx,aligny top")
+        contentPane.add(incModSpeedHotKeyTextField, "cell 6 3 3 1,growx,aligny top")
+        pack()
+
+        isVisible = true
     }
 
-    public static SettingsFrame getInstanceOf() {
-        if (instance == null) {
-            instance = new SettingsFrame();
-        } else {
-            instance.setVisible(true);
-            instance.requestFocus();
-        }
-        return instance;
-    }
+    private fun updateMicInjectorSettings() {
+        SoundboardFrame.micInjectorInputMixerName = (micComboBox.selectedItem as String)
+        SoundboardFrame.micInjectorOutputMixerName = (vacComboBox.selectedItem as String)
 
-    private void updateMicInjectorSettings() {
-        SoundboardFrame.micInjectorInputMixerName = (String) this.micComboBox.getSelectedItem();
-        SoundboardFrame.micInjectorOutputMixerName = (String) this.vacComboBox.getSelectedItem();
         if (SoundboardFrame.useMicInjector) {
-            Utils.startMicInjector(SoundboardFrame.micInjectorInputMixerName,
-                    SoundboardFrame.micInjectorOutputMixerName);
+            Utils.startMicInjector(
+                SoundboardFrame.micInjectorInputMixerName,
+                SoundboardFrame.micInjectorOutputMixerName
+            )
         }
     }
 
-    public void updateDisplayedModSpeed() {
-        this.modSpeedSpinner.setValue(Float.valueOf(Utils.getModifiedPlaybackSpeed()));
+    fun updateDisplayedModSpeed() {
+        modSpeedSpinner.value =
+            java.lang.Float.valueOf(Utils.getModifiedPlaybackSpeed())
     }
 
-    public void updateOverlapSwitchCheckBox() {
-        this.fOverlapClipsCheckbox.setSelected(Utils.isOverlapSameClipWhilePlaying());
+    fun updateOverlapSwitchCheckBox() {
+        fOverlapClipsCheckbox.isSelected = Utils.isOverlapSameClipWhilePlaying()
     }
 
-    public void dispose() {
-        super.dispose();
-        // GlobalScreen gs = GlobalScreen.getInstance();
-        // gs.removeNativeKeyListener(this.slowKeyInputGetter);
-        // gs.removeNativeKeyListener(this.stopKeyInputGetter);
-        // gs.removeNativeKeyListener(this.incKeyInputGetter);
-        // gs.removeNativeKeyListener(this.decKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.slowKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.stopKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.incKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.decKeyInputGetter);
-        this.pttKeysTextField.removeKeyListener(this.pttKeysInputGetter);
-        instance = null;
+    override fun dispose() {
+        super.dispose()
+        GlobalScreen.removeNativeKeyListener(slowKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(stopKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(incKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(decKeyInputGetter)
+
+        pttKeysTextField.removeKeyListener(pttKeysInputGetter)
+
+        instance = null
     }
 
-    private void focusLostOnItems() {
-        this.stopAllTextField.setBackground(Color.WHITE);
-        this.slowKeyTextField.setBackground(Color.WHITE);
-        this.decModSpeedHotKeyTextField.setBackground(Color.WHITE);
-        this.incModSpeedHotKeyTextField.setBackground(Color.WHITE);
-        this.fOverlapHotkeyTextField.setBackground(Color.WHITE);
-        this.pttKeysTextField.setBackground(Color.WHITE);
-        this.pttKeysInputGetter.clearPressedKeys();
-        // GlobalScreen gs = GlobalScreen.getInstance();
-        // gs.removeNativeKeyListener(this.stopKeyInputGetter);
-        // gs.removeNativeKeyListener(this.slowKeyInputGetter);
-        // gs.removeNativeKeyListener(this.incKeyInputGetter);
-        // gs.removeNativeKeyListener(this.decKeyInputGetter);
-        // gs.removeNativeKeyListener(this.fOverlapKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.stopKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.slowKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.incKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.decKeyInputGetter);
-        GlobalScreen.removeNativeKeyListener(this.fOverlapKeyInputGetter);
-        this.pttKeysTextField.removeKeyListener(this.pttKeysInputGetter);
+    private fun focusLostOnItems() {
+        decModSpeedHotKeyTextField.background = Color.WHITE
+        fOverlapHotkeyTextField.background = Color.WHITE
+        incModSpeedHotKeyTextField.background = Color.WHITE
+        pttKeysTextField.background = Color.WHITE
+        slowKeyTextField.background = Color.WHITE
+        stopAllTextField.background = Color.WHITE
+
+        pttKeysInputGetter.clearPressedKeys()
+
+        GlobalScreen.removeNativeKeyListener(stopKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(slowKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(incKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(decKeyInputGetter)
+        GlobalScreen.removeNativeKeyListener(fOverlapKeyInputGetter)
+
+        pttKeysTextField.removeKeyListener(pttKeysInputGetter)
     }
 
-    private class OverlapSwitchNativeKeyInputGetter implements NativeKeyListener {
-        int key = Utils.stopKey;
+    private inner class OverlapSwitchNativeKeyInputGetter : NativeKeyListener {
+        var key = Utils.stopKey
 
-        private OverlapSwitchNativeKeyInputGetter() {
+        private fun updateTextField() {
+            val keyname = NativeKeyEvent.getKeyText(key)
+            fOverlapHotkeyTextField.text = keyname
         }
 
-        private void updateTextField() {
-            String keyname = NativeKeyEvent.getKeyText(this.key);
-            SettingsFrame.this.fOverlapHotkeyTextField.setText(keyname);
+        override fun nativeKeyPressed(e: NativeKeyEvent) {
+            key = e.keyCode
+            Utils.setOverlapSwitchKey(key)
+            updateTextField()
         }
 
-        public void nativeKeyPressed(NativeKeyEvent e) {
-            this.key = e.getKeyCode();
-            Utils.setOverlapSwitchKey(this.key);
-            updateTextField();
-        }
+        override fun nativeKeyReleased(arg0: NativeKeyEvent) {}
 
-        public void nativeKeyReleased(NativeKeyEvent arg0) {
-        }
-
-        public void nativeKeyTyped(NativeKeyEvent arg0) {
-        }
+        override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
     }
 
-    private class PttKeysNativeKeyInputGetter implements KeyListener {
-        HashSet<Integer> pressedkeys = new HashSet();
+    private inner class PttKeysNativeKeyInputGetter : KeyListener {
+        var pressedkeys: HashSet<Int?> = HashSet()
 
-        private PttKeysNativeKeyInputGetter() {
+        override fun keyPressed(e: KeyEvent) {
+            val key = e.keyCode
+            pressedkeys.add(Integer.valueOf(key))
+
+            Utils.setPTTkeys(pressedkeys)
+            updateTextField()
+
+            println("PPT listener key pressed: " + KeyEvent.getKeyText(key))
         }
 
-        public void keyPressed(KeyEvent e) {
-            int key = e.getKeyCode();
-            this.pressedkeys.add(Integer.valueOf(key));
-            Utils.setPTTkeys(this.pressedkeys);
-            updateTextField();
-            System.out.println("PPT listener key pressed: " + KeyEvent.getKeyText(key));
+        override fun keyReleased(e: KeyEvent) {
+            val key = Integer.valueOf(e.keyCode)
+            pressedkeys.remove(key)
+
+            println("PPT listener key released: " + KeyEvent.getKeyText(key.toInt()))
         }
 
-        public void keyReleased(KeyEvent e) {
-            Integer key = Integer.valueOf(e.getKeyCode());
-            this.pressedkeys.remove(key);
-            System.out.println("PPT listener key released: " + KeyEvent.getKeyText(key.intValue()));
-        }
+        override fun keyTyped(arg0: KeyEvent) {}
 
-        public void keyTyped(KeyEvent arg0) {
-        }
+        @Synchronized
+        fun updateTextField() {
+            val keyString = StringBuilder()
+            val keys = Utils.getPTTkeys()
 
-        private synchronized void updateTextField() {
-            StringBuilder keyString = new StringBuilder();
-            ArrayList<Integer> keys = Utils.getPTTkeys();
-            for (int i = 0; i < keys.size(); i++) {
+            for (i in keys.indices) {
                 if (i == 0) {
-                    keyString.append(KeyEvent.getKeyText(keys.get(i).intValue()));
+                    keyString.append(KeyEvent.getKeyText(keys[i].toInt()))
                 } else {
-                    keyString.append(" + " + KeyEvent.getKeyText(keys.get(i).intValue()));
+                    keyString.append(" + " + KeyEvent.getKeyText(keys[i].toInt()))
                 }
             }
-            SettingsFrame.this.pttKeysTextField.setText(keyString.toString());
-            System.out.println("PTT listener text field updated");
+
+            pttKeysTextField.text = keyString.toString()
+            println("PTT listener text field updated")
         }
 
-        private synchronized void clearPressedKeys() {
-            this.pressedkeys.clear();
-            System.out.println("PTT listener keys cleared");
-        }
-    }
-
-    private class ModSpeedKeyNativeKeyInputGetter implements NativeKeyListener {
-        int key = Utils.slowKey;
-
-        private ModSpeedKeyNativeKeyInputGetter() {
-        }
-
-        public void nativeKeyPressed(NativeKeyEvent e) {
-            this.key = e.getKeyCode();
-            Utils.setModifiedSpeedKey(this.key);
-            updateTextField();
-        }
-
-        public void nativeKeyReleased(NativeKeyEvent e) {
-        }
-
-        public void nativeKeyTyped(NativeKeyEvent arg0) {
-        }
-
-        private synchronized void updateTextField() {
-            String keyname = NativeKeyEvent.getKeyText(this.key);
-            SettingsFrame.this.slowKeyTextField.setText(keyname);
+        @Synchronized
+        fun clearPressedKeys() {
+            pressedkeys.clear()
+            println("PTT listener keys cleared")
         }
     }
 
-    private class StopKeyNativeKeyInputGetter implements NativeKeyListener {
-        int key = Utils.stopKey;
+    private inner class ModSpeedKeyNativeKeyInputGetter : NativeKeyListener {
+        var key = Utils.slowKey
 
-        private StopKeyNativeKeyInputGetter() {
+        override fun nativeKeyPressed(e: NativeKeyEvent) {
+            key = e.keyCode
+            Utils.setModifiedSpeedKey(key)
+            updateTextField()
         }
 
-        public void nativeKeyPressed(NativeKeyEvent e) {
-            this.key = e.getKeyCode();
-            Utils.setStopKey(this.key);
-            updateTextField();
-        }
+        override fun nativeKeyReleased(e: NativeKeyEvent) {}
 
-        public void nativeKeyReleased(NativeKeyEvent e) {
-        }
+        override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
 
-        public void nativeKeyTyped(NativeKeyEvent arg0) {
-        }
-
-        private synchronized void updateTextField() {
-            String keyname = NativeKeyEvent.getKeyText(this.key);
-            SettingsFrame.this.stopAllTextField.setText(keyname);
+        @Synchronized
+        private fun updateTextField() {
+            val keyname = NativeKeyEvent.getKeyText(key)
+            slowKeyTextField.text = keyname
         }
     }
 
-    private class IncKeyNativeKeyInputGetter implements NativeKeyListener {
-        int key = Utils.getModspeedupKey();
+    private inner class StopKeyNativeKeyInputGetter : NativeKeyListener {
+        var key = Utils.stopKey
 
-        private IncKeyNativeKeyInputGetter() {
+        override fun nativeKeyPressed(e: NativeKeyEvent) {
+            key = e.keyCode
+            Utils.setStopKey(key)
+            updateTextField()
         }
 
-        public void nativeKeyPressed(NativeKeyEvent e) {
-            this.key = e.getKeyCode();
-            Utils.setModspeedupKey(this.key);
-            updateTextField();
-        }
+        override fun nativeKeyReleased(e: NativeKeyEvent) {}
 
-        public void nativeKeyReleased(NativeKeyEvent e) {
-        }
+        override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
 
-        public void nativeKeyTyped(NativeKeyEvent arg0) {
-        }
-
-        private synchronized void updateTextField() {
-            String keyname = NativeKeyEvent.getKeyText(this.key);
-            SettingsFrame.this.incModSpeedHotKeyTextField.setText(keyname);
+        @Synchronized
+        private fun updateTextField() {
+            val keyname = NativeKeyEvent.getKeyText(key)
+            stopAllTextField.text = keyname
         }
     }
 
-    private class DecKeyNativeKeyInputGetter implements NativeKeyListener {
-        int key = Utils.getModspeeddownKey();
+    private inner class IncKeyNativeKeyInputGetter : NativeKeyListener {
+        var key = Utils.getModspeedupKey()
+        override fun nativeKeyPressed(e: NativeKeyEvent) {
 
-        private DecKeyNativeKeyInputGetter() {
+            key = e.keyCode
+            Utils.setModspeedupKey(key)
+            updateTextField()
         }
 
-        public void nativeKeyPressed(NativeKeyEvent e) {
-            this.key = e.getKeyCode();
-            Utils.setModspeeddownKey(this.key);
-            updateTextField();
+        override fun nativeKeyReleased(e: NativeKeyEvent) {}
+
+        override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
+
+        @Synchronized
+        private fun updateTextField() {
+            val keyname = NativeKeyEvent.getKeyText(key)
+            incModSpeedHotKeyTextField.text = keyname
+        }
+    }
+
+    private inner class DecKeyNativeKeyInputGetter : NativeKeyListener {
+        var key = Utils.getModspeeddownKey()
+
+        override fun nativeKeyPressed(e: NativeKeyEvent) {
+            key = e.keyCode
+            Utils.setModspeeddownKey(key)
+            updateTextField()
         }
 
-        public void nativeKeyReleased(NativeKeyEvent e) {
-        }
+        override fun nativeKeyReleased(e: NativeKeyEvent) {}
 
-        public void nativeKeyTyped(NativeKeyEvent arg0) {
-        }
+        override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
 
-        private synchronized void updateTextField() {
-            String keyname = NativeKeyEvent.getKeyText(this.key);
-            SettingsFrame.this.decModSpeedHotKeyTextField.setText(keyname);
+        @Synchronized
+        private fun updateTextField() {
+            val keyname = NativeKeyEvent.getKeyText(key)
+            decModSpeedHotKeyTextField.text = keyname
         }
+    }
+
+    companion object {
+        private const val serialVersionUID = -4758092886690912749L
+
+        @JvmField
+        var instance: SettingsFrame? = null
+
+        val instanceOf: SettingsFrame
+            get() {
+                if (instance == null) {
+                    instance = SettingsFrame()
+                } else {
+                    instance!!.isVisible = true
+                    instance!!.requestFocus()
+                }
+                return instance!!
+            }
     }
 }

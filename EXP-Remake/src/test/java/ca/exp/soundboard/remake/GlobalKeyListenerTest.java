@@ -2,13 +2,13 @@ package ca.exp.soundboard.remake;
 
 import java.util.ArrayList;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.jnativehook.GlobalScreen;
 import org.jnativehook.NativeHookException;
 import org.jnativehook.keyboard.NativeKeyEvent;
 import org.jnativehook.keyboard.NativeKeyListener;
 
-import com.sun.istack.internal.logging.Logger;
 
 public class GlobalKeyListenerTest implements NativeKeyListener {
 	
@@ -18,7 +18,7 @@ public class GlobalKeyListenerTest implements NativeKeyListener {
 	public static void main(String[] args) {
 		try {
 			GlobalScreen.registerNativeHook();
-			Logger nativeLogger = Logger.getLogger(GlobalScreen.class);
+			Logger nativeLogger = Logger.getLogger(GlobalScreen.class.getName());
 			nativeLogger.setLevel(Level.OFF);
 		} catch (NativeHookException nhe) {
 			nhe.printStackTrace();

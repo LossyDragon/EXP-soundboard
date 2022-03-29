@@ -2,9 +2,9 @@ package ca.exp.soundboard.rewrite.converter;
 
 import ca.exp.soundboard.rewrite.soundboard.Utils;
 import ca.exp.soundboard.rewrite.gui.SoundboardFrame;
-import it.sauronsoftware.jave.EncoderProgressListener;
-import it.sauronsoftware.jave.MultimediaInfo;
 import net.miginfocom.swing.MigLayout;
+import ws.schild.jave.info.MultimediaInfo;
+import ws.schild.jave.progress.EncoderProgressListener;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileFilter;

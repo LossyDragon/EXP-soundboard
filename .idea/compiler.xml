@@ -1,21 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="CompilerConfiguration">
-    <annotationProcessing>
-      <profile name="Maven default annotation processors profile" enabled="true">
-        <sourceOutputDir name="target/generated-sources/annotations" />
-        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
-        <outputRelativeToContentRoot value="true" />
-        <module name="exp-remake" />
-        <module name="exp-rewrite" />
-      </profile>
-    </annotationProcessing>
-    <bytecodeTargetLevel>
+    <bytecodeTargetLevel target="11">
       <module name="exp-remake" target="1.8" />
       <module name="EXP-Remake" target="1.8" />
       <module name="exp-rewrite" target="1.8" />
       <module name="EXP-Rewrite" target="1.8" />
-      <module name="EXP-soundboard" target="1.8" />
+      <module name="EXP-soundboard" target="1.5" />
+      <module name="EXP-soundboard.buildSrc" target="11" />
+      <module name="EXP-soundboard.buildSrc.main" target="11" />
+      <module name="EXP-soundboard.buildSrc.test" target="11" />
     </bytecodeTargetLevel>
   </component>
 </project>
