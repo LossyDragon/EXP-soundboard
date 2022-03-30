@@ -18,6 +18,7 @@ import java.util.*
 import java.util.logging.Level
 import java.util.logging.LogManager
 import java.util.logging.Logger
+import java.util.prefs.Preferences
 import javax.swing.*
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.DefaultTableModel
@@ -45,6 +46,8 @@ class SoundboardFrame : JFrame() {
         get() = SettingsFrame.instanceOf.setLocationRelativeTo(this)
 
     init {
+        println("Pref: " + Utils.prefs.absolutePath())
+
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
                 exit()
@@ -117,7 +120,7 @@ class SoundboardFrame : JFrame() {
         autoPptCheckBox = JCheckBox("Auto-hold PTT key(s)").apply {
             addActionListener {
                 val selected = this.isSelected
-                Utils.setAutoPTThold(selected)
+                Utils.isAutoPTThold = selected
             }
         }
 
@@ -191,7 +194,7 @@ class SoundboardFrame : JFrame() {
                     val index = selectedEntryIndex
                     println("index $index")
                     val entry = soundboard.getEntry(index)
-                    SoundboardEntryEditor(thisFrameInstance, entry)
+                    SoundboardEntryEditor(thisFrameInstance, entry!!)
                 }
             }
         }
@@ -203,9 +206,9 @@ class SoundboardFrame : JFrame() {
                     val index = selectedEntryIndex
                     val entry = soundboard.getEntry(index)
                     if (macroListener.isSpeedModKeyHeld) {
-                        entry.play(audioManager, true)
+                        entry?.play(audioManager, true)
                     } else {
-                        entry.play(audioManager, false)
+                        entry?.play(audioManager, false)
                     }
                 }
             }
@@ -229,53 +232,69 @@ class SoundboardFrame : JFrame() {
         }
 
         val mnFile = JMenu("File").apply {
-            add(JMenuItem("New").apply {
-                addActionListener { fileNew() }
-            })
-            add(JMenuItem("Open").apply {
-                addActionListener { fileOpen() }
-            })
-            add(JSeparator())
-            add(JMenuItem("Save").apply {
-                accelerator = KeyStroke.getKeyStroke(83, 2)
-                addActionListener { fileSave() }
-            })
-            add(JMenuItem("Save As...").apply {
-                addActionListener { fileSaveAs() }
-            })
-            add(JSeparator())
-            add(JMenuItem("Sourceforge Page").apply {
-                addActionListener {
-                    Desktop.getDesktop().browse(URI("https://sourceforge.net/projects/expsoundboard/"))
+            add(
+                JMenuItem("New").apply {
+                    addActionListener { fileNew() }
                 }
-            })
+            )
+            add(
+                JMenuItem("Open").apply {
+                    addActionListener { fileOpen() }
+                }
+            )
+            add(JSeparator())
+            add(
+                JMenuItem("Save").apply {
+                    accelerator = KeyStroke.getKeyStroke(83, 2)
+                    addActionListener { fileSave() }
+                }
+            )
+            add(
+                JMenuItem("Save As...").apply {
+                    addActionListener { fileSaveAs() }
+                }
+            )
+            add(JSeparator())
+            add(
+                JMenuItem("Sourceforge Page").apply {
+                    addActionListener {
+                        Desktop.getDesktop().browse(URI("https://sourceforge.net/projects/expsoundboard/"))
+                    }
+                }
+            )
             add(JSeparator())
             add(JMenuItem("Quit").apply { addActionListener { exit() } })
         }
 
         val mnOption = JMenu("Option").apply {
-            add(JMenuItem("Settings").apply {
-                addActionListener { settingsMenu }
-            })
-            add(JMenuItem("Audio Levels").apply {
-                addActionListener { AudioLevelsFrame.instanceOf.setLocationRelativeTo(thisFrameInstance) }
-            })
+            add(
+                JMenuItem("Settings").apply {
+                    addActionListener { settingsMenu }
+                }
+            )
+            add(
+                JMenuItem("Audio Levels").apply {
+                    addActionListener { AudioLevelsFrame.instanceOf.setLocationRelativeTo(thisFrameInstance) }
+                }
+            )
             add(JSeparator())
-            add(JMenuItem("Audio Converter").apply {
-                addActionListener {
-                    val osName = System.getProperty("os.name")
-                    if (!osName.lowercase().contains("mac")) {
-                        ConverterFrame()
-                    } else {
-                        JOptionPane.showMessageDialog(
-                            null,
-                            "Audio Converter currently not supported on Mac OS X",
-                            "Feature not supported",
-                            1
-                        )
+            add(
+                JMenuItem("Audio Converter").apply {
+                    addActionListener {
+                        val osName = System.getProperty("os.name")
+                        if (!osName.lowercase().contains("mac")) {
+                            ConverterFrame()
+                        } else {
+                            JOptionPane.showMessageDialog(
+                                null,
+                                "Audio Converter currently not supported on Mac OS X",
+                                "Feature not supported",
+                                1
+                            )
+                        }
                     }
                 }
-            })
+            )
         }
 
         jMenuBar = menuBar
@@ -340,7 +359,7 @@ class SoundboardFrame : JFrame() {
 
     private fun fileSave() {
         if (currentSoundboardFile != null) {
-            soundboard.saveAsJsonFile(currentSoundboardFile)
+            soundboard.saveAsJsonFile(currentSoundboardFile!!)
         } else {
             fileSaveAs()
         }
@@ -360,7 +379,6 @@ class SoundboardFrame : JFrame() {
             title = appTitle + currentSoundboardFile!!.name
         }
     }
-
 
     private fun open(jsonfile: File) {
         if (jsonfile.exists()) {
@@ -402,26 +420,27 @@ class SoundboardFrame : JFrame() {
             if (currentSoundboardFile != null) {
                 put("lastSoundboardUsed", currentSoundboardFile!!.absolutePath)
             }
-            put("autoPTTkeys", Utils.getPTTkeys().toString())
+            put("autoPTTkeys", Utils.pTTkeys.toString())
             put("micInjectorInput", micInjectorInputMixerName)
             put("micInjectorOutput", micInjectorOutputMixerName)
             putBoolean("OverlapClipsWhilePlaying", Utils.isOverlapSameClipWhilePlaying())
-            putBoolean("autoPPTenabled", Utils.autoPTThold)
+            putBoolean("autoPPTenabled", Utils.isAutoPTThold)
             putBoolean("micInjectorEnabled", useMicInjector)
-            putFloat("micInjectorOutputGain", Utils.getMicInjectorGain())
+            putFloat("micInjectorOutputGain", Utils.micInjectorGain)
             putFloat("modplaybackspeed", Utils.getModifiedPlaybackSpeed())
             putFloat("primaryOutputGain", AudioManager.getFirstOutputGain())
             putFloat("secondaryOutputGain", AudioManager.getSecondOutputGain())
-            putInt("OverlapClipsKey", Utils.getOverlapSwitchKey())
-            putInt("modSpeedDecKey", Utils.getModspeeddownKey())
-            putInt("modSpeedIncKey", Utils.getModspeedupKey())
-            putInt("slowSoundKey", Utils.getModifiedSpeedKey())
-            putInt("stopAllKey", Utils.getStopKey())
+            putInt("OverlapClipsKey", Utils.overlapSwitchKey)
+            putInt("modSpeedDecKey", Utils.modspeeddownKey)
+            putInt("modSpeedIncKey", Utils.modspeedupKey)
+            putInt("slowSoundKey", Utils.modifiedSpeedKey)
+            putInt("stopAllKey", Utils.stopKey)
         }
     }
 
     private fun loadPrefs() {
         val prefs = Utils.prefs
+
         val useSecond = prefs.getBoolean("useSecondSpeaker", false)
 
         useSecondaryCheckBox.isSelected = useSecond
@@ -448,16 +467,16 @@ class SoundboardFrame : JFrame() {
         Utils.setModifiedPlaybackSpeed(modSpeed)
 
         val slowkey = prefs.getInt("slowSoundKey", 35)
-        Utils.setModifiedSpeedKey(slowkey)
+        Utils.modifiedSpeedKey = slowkey
 
         val stopkey = prefs.getInt("stopAllKey", 19)
-        Utils.setStopKey(stopkey)
+        Utils.stopKey = stopkey
 
         val incKey = prefs.getInt("modSpeedIncKey", 39)
-        Utils.setModspeedupKey(incKey)
+        Utils.modspeedupKey = incKey
 
         val decKey = prefs.getInt("modSpeedDecKey", 37)
-        Utils.setModspeeddownKey(decKey)
+        Utils.modspeeddownKey = decKey
 
         val firstOutputGain = prefs.getFloat("primaryOutputGain", 0.0f)
         val secondOutputGain = prefs.getFloat("secondaryOutputGain", 0.0f)
@@ -466,7 +485,7 @@ class SoundboardFrame : JFrame() {
         AudioManager.setFirstOutputGain(firstOutputGain)
         AudioManager.setSecondOutputGain(secondOutputGain)
 
-        Utils.setMicInjectorGain(micinjectorOutputGain)
+        Utils.micInjectorGain = micinjectorOutputGain
 
         micInjectorInputMixerName = prefs["micInjectorInput", ""]
         micInjectorOutputMixerName = prefs["micInjectorOutput", ""]
@@ -477,18 +496,18 @@ class SoundboardFrame : JFrame() {
         val useautoptt = prefs.getBoolean("autoPPTenabled", false)
         autoPptCheckBox.isSelected = useautoptt
 
-        Utils.setAutoPTThold(useautoptt)
+        Utils.isAutoPTThold = useautoptt
 
         val autopttkeys = prefs["autoPTTkeys", null]
         if (autopttkeys != null) {
             val keys = Utils.stringToIntArrayList(autopttkeys)
-            Utils.setPTTkeys(keys)
+            Utils.pTTkeys = keys
         }
 
-        Utils.setOverlapSameClipWhilePlaying(prefs.getBoolean("OverlapClipsWhilePlaying", true))
+        Utils.overlapSameClipWhilePlaying = prefs.getBoolean("OverlapClipsWhilePlaying", true)
 
         val overlapKey = prefs.getInt("OverlapClipsKey", 36)
-        Utils.setOverlapSwitchKey(overlapKey)
+        Utils.overlapSwitchKey = overlapKey
     }
 
     private fun exit() {
@@ -507,7 +526,7 @@ class SoundboardFrame : JFrame() {
         if (currentSoundboardFile != null) {
             if (currentSoundboardFile!!.exists()) {
                 val gson = Gson()
-                val savedFile = Soundboard.loadFromJsonFile(currentSoundboardFile)
+                val savedFile = Soundboard.loadFromJsonFile(currentSoundboardFile!!)
                 val savedjson = gson.toJson(savedFile)
                 val currentjson = gson.toJson(soundboard)
 
@@ -520,7 +539,7 @@ class SoundboardFrame : JFrame() {
                     )
 
                     if (option == 0) {
-                        soundboard.saveAsJsonFile(currentSoundboardFile)
+                        soundboard.saveAsJsonFile(currentSoundboardFile!!)
                     }
                 }
             }
@@ -561,29 +580,30 @@ class SoundboardFrame : JFrame() {
     }
 
     companion object {
-        const val VERSION = "0.5"
-        private const val OVERLAPSWITCHKEYKEY = "OverlapClipsKey"
+        private const val VERSION = "0.5"
+
+        //        private const val OVERLAPSWITCHKEYKEY = "OverlapClipsKey"
         private const val appTitle = "EXP SoundboardStage vers. $VERSION | "
-        private const val autoPPTKeysKey = "autoPTTkeys"
-        private const val autoPPTenabledKey = "autoPPTenabled"
-        private const val firstSpeakerKey = "firstSpeaker"
-        private const val lastSoundboardFileKey = "lastSoundboardUsed"
-        private const val micInjectorEnabledKey = "micInjectorEnabled"
-        private const val micInjectorInputKey = "micInjectorInput"
-        private const val micInjectorOutputGainKey = "micInjectorOutputGain"
-        private const val micInjectorOutputKey = "micInjectorOutput"
-        private const val modPlaybackSpeedKey = "modplaybackspeed"
-        private const val modPlaybackSpeedKeyKey = "slowSoundKey"
-        private const val modSpeedDecKeyKey = "modSpeedDecKey"
-        private const val modSpeedIncKeyKey = "modSpeedIncKey"
-        private const val overlapClipsKey = "OverlapClipsWhilePlaying"
-        private const val primaryOutputGainKey = "primaryOutputGain"
-        private const val secondSpeakerKey = "secondSpeaker"
-        private const val secondaryOutputGainKey = "secondaryOutputGain"
-        private const val serialVersionUID = 8934802095461138592L
-        private const val stopallKeyKey = "stopAllKey"
-        private const val updateCheckKey = "updateCheckOnLaunch"
-        private const val useSecondaryKey = "useSecondSpeaker"
+//        private const val autoPPTKeysKey = "autoPTTkeys"
+//        private const val autoPPTenabledKey = "autoPPTenabled"
+//        private const val firstSpeakerKey = "firstSpeaker"
+//        private const val lastSoundboardFileKey = "lastSoundboardUsed"
+//        private const val micInjectorEnabledKey = "micInjectorEnabled"
+//        private const val micInjectorInputKey = "micInjectorInput"
+//        private const val micInjectorOutputGainKey = "micInjectorOutputGain"
+//        private const val micInjectorOutputKey = "micInjectorOutput"
+//        private const val modPlaybackSpeedKey = "modplaybackspeed"
+//        private const val modPlaybackSpeedKeyKey = "slowSoundKey"
+//        private const val modSpeedDecKeyKey = "modSpeedDecKey"
+//        private const val modSpeedIncKeyKey = "modSpeedIncKey"
+//        private const val overlapClipsKey = "OverlapClipsWhilePlaying"
+//        private const val primaryOutputGainKey = "primaryOutputGain"
+//        private const val secondSpeakerKey = "secondSpeaker"
+//        private const val secondaryOutputGainKey = "secondaryOutputGain"
+//        private const val serialVersionUID = 8934802095461138592L
+//        private const val stopallKeyKey = "stopAllKey"
+//        private const val updateCheckKey = "updateCheckOnLaunch"
+//        private const val useSecondaryKey = "useSecondSpeaker"
 
         lateinit var icon: Image
 
@@ -610,7 +630,7 @@ class SoundboardFrame : JFrame() {
             logger.level = Level.OFF
 
             Utils.initGlobalKeyLibrary()
-            //Utils.startMp3Decoder();
+            // Utils.startMp3Decoder();
 
             SoundboardFrame().isVisible = true
         }

@@ -1,21 +1,27 @@
-package ca.exp.soundboard.rewrite.soundboard;
+package ca.exp.soundboard.rewrite.soundboard
 
-import java.nio.ByteBuffer;
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
-public class SoundUtils {
-    public static short[] byteToShortArray(byte[] byteArray) {
-        short[] shortArray = new short[byteArray.length / 2];
-        for (int i = 0; i < shortArray.length; i++) {
-            int ub1 = byteArray[(i * 2 + 0)] & 0xFF;
-            int ub2 = byteArray[(i * 2 + 1)] & 0xFF;
-            shortArray[i] = ((short) ((ub2 << 8) + ub1));
+object SoundUtils {
+
+    fun byteToShortArray(byteArray: ByteArray): ShortArray {
+        val shortArray = ShortArray(byteArray.size / 2)
+
+        for (i in shortArray.indices) {
+            val ub1: Int = byteArray[i * 2 + 0].toInt() and 0xFF
+            val ub2: Int = byteArray[i * 2 + 1].toInt() and 0xFF
+            shortArray[i] = ((ub2 shl 8) + ub1).toShort()
         }
-        return shortArray;
+
+        return shortArray
     }
 
-    public static byte[] shortArrayToByteArray(short[] shortArray) {
-        byte[] byteArray = new byte[shortArray.length * 2];
-        ByteBuffer.wrap(byteArray).order(java.nio.ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(shortArray);
-        return byteArray;
+    fun shortArrayToByteArray(shortArray: ShortArray): ByteArray {
+        val byteArray = ByteArray(shortArray.size * 2)
+
+        ByteBuffer.wrap(byteArray).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(shortArray)
+
+        return byteArray
     }
 }

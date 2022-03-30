@@ -18,10 +18,10 @@ class SoundboardEntryEditor(
     private var soundboardframe: SoundboardFrame
 ) : JFrame() {
 
-    lateinit var keyNums: IntArray
     private val inputGetter: NativeKeyInputGetter
     private val keysTextField: JTextField
     private val selectedSoundClipLabel: JLabel
+    private var keyNums: IntArray? = null
     private var soundboard: Soundboard = SoundboardFrame.soundboard
     private var soundboardEntry: SoundboardEntry? = null
     private var soundfile: File? = null
@@ -29,7 +29,7 @@ class SoundboardEntryEditor(
     constructor(soundboardFrame: SoundboardFrame, entry: SoundboardEntry) : this(soundboardFrame) {
         soundfile = File(entry.fileString)
 
-        keyNums = entry.activationKeysNumbers
+        keyNums = entry.activationKeys
         selectedSoundClipLabel.text = entry.fileString
         keysTextField.text = entry.activationKeysAsReadableString
 
@@ -190,10 +190,10 @@ class SoundboardEntryEditor(
             return
 
         if (soundboardEntry == null) {
-            soundboard.addEntry(soundfile, keyNums)
+            soundboard.addEntry(soundfile!!, keyNums)
             soundboardframe.updateSoundboardTable()
         } else {
-            soundboardEntry!!.setFile(soundfile)
+            soundboardEntry!!.setFile(soundfile!!)
             soundboardEntry!!.activationKeys = keyNums
             soundboardframe.updateSoundboardTable()
         }

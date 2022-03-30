@@ -1,114 +1,127 @@
-package ca.exp.soundboard.rewrite.soundboard;
+package ca.exp.soundboard.rewrite.soundboard
 
-import ca.exp.soundboard.rewrite.gui.SoundboardFrame;
-import org.jnativehook.keyboard.NativeKeyEvent;
-import org.jnativehook.keyboard.NativeKeyListener;
+import ca.exp.soundboard.rewrite.gui.SoundboardFrame
+import ca.exp.soundboard.rewrite.soundboard.Utils.decrementModSpeedDown
+import ca.exp.soundboard.rewrite.soundboard.Utils.incrementModSpeedUp
+import ca.exp.soundboard.rewrite.soundboard.Utils.isOverlapSameClipWhilePlaying
+import org.jnativehook.keyboard.NativeKeyEvent
+import org.jnativehook.keyboard.NativeKeyListener
 
-import java.util.ArrayList;
-import java.util.Iterator;
+class GlobalKeyMacroListener(
+    private var soundboardFrame: SoundboardFrame
+) : NativeKeyListener {
 
-public class GlobalKeyMacroListener implements NativeKeyListener {
-    SoundboardFrame soundboardFrame;
-    ArrayList<Integer> pressedKeys;
+    private var pressedKeys: ArrayList<Int> = ArrayList()
 
-    public GlobalKeyMacroListener(SoundboardFrame frame) {
-        this.soundboardFrame = frame;
-        this.pressedKeys = new ArrayList<Integer>();
-    }
+    val isSpeedModKeyHeld: Boolean
+        get() {
+            val localIterator: Iterator<*> = pressedKeys.iterator()
+            while (localIterator.hasNext()) {
+                val key = (localIterator.next() as Int).toInt()
+                if (key == Utils.modifiedSpeedKey) {
+                    return true
+                }
+            }
+            return false
+        }
 
-    public void nativeKeyPressed(NativeKeyEvent e) {
-        int pressed = e.getKeyCode();
-        Utils.submitNativeKeyPressTime(NativeKeyEvent.getKeyText(pressed), e.getWhen());
-        boolean alreadyPressed = false;
-        for (Iterator localIterator = this.pressedKeys.iterator(); localIterator.hasNext(); ) {
-            int i = ((Integer) localIterator.next()).intValue();
+    val pressedNativeKeys: ArrayList<Int>
+        get() {
+            val array: ArrayList<Int> = arrayListOf()
+            for (i in pressedKeys) {
+                array.add(i)
+            }
+
+            return array
+        }
+
+    override fun nativeKeyPressed(e: NativeKeyEvent) {
+        val pressed = e.keyCode
+
+        Utils.submitNativeKeyPressTime(NativeKeyEvent.getKeyText(pressed), e.getWhen())
+        var alreadyPressed = false
+        val localIterator: Iterator<*> = pressedKeys.iterator()
+
+        while (localIterator.hasNext()) {
+            val i = (localIterator.next() as Int).toInt()
             if (pressed == i) {
-                alreadyPressed = true;
-                break;
+                alreadyPressed = true
+                break
             }
         }
+
         if (!alreadyPressed) {
-            this.pressedKeys.add(Integer.valueOf(pressed));
+            pressedKeys.add(Integer.valueOf(pressed))
         }
-        if (pressed == Utils.stopKey) {
-            Utils.stopAllClips();
-        } else if (pressed == Utils.modspeedupKey) {
-            Utils.incrementModSpeedUp();
-        } else if (pressed == Utils.modspeeddownKey) {
-            Utils.decrementModSpeedDown();
-        } else if (pressed == Utils.getOverlapSwitchKey()) {
-            boolean overlap = Utils.isOverlapSameClipWhilePlaying();
-            Utils.setOverlapSameClipWhilePlaying(!overlap);
+
+        when (pressed) {
+            Utils.stopKey -> Utils.stopAllClips()
+            Utils.modspeedupKey -> incrementModSpeedUp()
+            Utils.modspeeddownKey -> decrementModSpeedDown()
+            Utils.overlapSwitchKey -> {
+                val overlap = isOverlapSameClipWhilePlaying()
+                Utils.overlapSameClipWhilePlaying = !overlap
+            }
         }
-        checkMacros();
+
+        checkMacros()
     }
 
-    public void nativeKeyReleased(NativeKeyEvent e) {
-        int released = e.getKeyCode();
-        for (int i = 0; i < this.pressedKeys.size(); i++) {
-            if (released == this.pressedKeys.get(i).intValue()) {
-                this.pressedKeys.remove(i);
+    override fun nativeKeyReleased(e: NativeKeyEvent) {
+        val released = e.keyCode
+        for (i in pressedKeys.indices) {
+            if (released == pressedKeys[i]) {
+                pressedKeys.removeAt(i)
             }
         }
     }
 
-    public void nativeKeyTyped(NativeKeyEvent arg0) {
-    }
+    override fun nativeKeyTyped(arg0: NativeKeyEvent) {}
 
-    public boolean isSpeedModKeyHeld() {
-        for (Iterator localIterator = this.pressedKeys.iterator(); localIterator.hasNext(); ) {
-            int key = ((Integer) localIterator.next()).intValue();
-            if (key == Utils.slowKey) {
-                return true;
-            }
-        }
-        return false;
-    }
+    private fun checkMacros() {
+        var modspeed = false
 
-    public ArrayList<Integer> getPressedNativeKeys() {
-        ArrayList<Integer> array = new ArrayList();
-        for (Integer i : this.pressedKeys) {
-            array.add(new Integer(i.intValue()));
+        if (isSpeedModKeyHeld) {
+            modspeed = true
         }
-        return array;
-    }
 
-    private void checkMacros() {
-        boolean modspeed = false;
-        if (isSpeedModKeyHeld()) {
-            modspeed = true;
-        }
-        ArrayList<SoundboardEntry> potential = new ArrayList();
-        for (SoundboardEntry entry : SoundboardFrame.soundboard.getSoundboardEntries()) {
-            int[] actKeys = entry.getActivationKeys();
-            if ((actKeys.length > 0) && (entry.matchesPressed(this.pressedKeys))) {
-                potential.add(entry);
+        val potential: ArrayList<SoundboardEntry?> = arrayListOf()
+
+        for (entry in SoundboardFrame.soundboard.soundboardEntries) {
+            val actKeys = entry.activationKeys
+            if (actKeys!!.isNotEmpty() && entry.matchesPressed(pressedKeys)) {
+                potential.add(entry)
             }
         }
 
-        if (potential.size() == 1) {
-            potential.get(0).play(this.soundboardFrame.audioManager, modspeed);
+        if (potential.size == 1) {
+            potential[0]!!.play(soundboardFrame.audioManager, modspeed)
         } else {
-            int highest = 0;
-            ArrayList<SoundboardEntry> potentialCopy = new ArrayList<SoundboardEntry>(potential);
-            for (SoundboardEntry p : potentialCopy) {
-                int matches = p.matchesHowManyPressed(this.pressedKeys);
+            var highest = 0
+            var potentialCopy = ArrayList(potential)
+
+            for (p in potentialCopy) {
+                val matches = p!!.matchesHowManyPressed(pressedKeys)
+
                 if (matches > highest) {
-                    highest = matches;
+                    highest = matches
                 } else if (matches < highest) {
-                    potential.remove(p);
-                }
-            }
-            potentialCopy = new ArrayList<SoundboardEntry>(potential);
-            for (SoundboardEntry p : potentialCopy) {
-                int matches = p.matchesHowManyPressed(this.pressedKeys);
-                if (matches < highest) {
-                    potential.remove(p);
+                    potential.remove(p)
                 }
             }
 
-            for (SoundboardEntry p : potential) {
-                p.play(this.soundboardFrame.audioManager, modspeed);
+            potentialCopy = ArrayList(potential)
+
+            for (p in potentialCopy) {
+                val matches = p!!.matchesHowManyPressed(pressedKeys)
+
+                if (matches < highest) {
+                    potential.remove(p)
+                }
+            }
+
+            for (p in potential) {
+                p!!.play(soundboardFrame.audioManager, modspeed)
             }
         }
     }

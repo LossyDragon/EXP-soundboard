@@ -23,7 +23,7 @@ class AudioLevelsFrame : JFrame() {
         val lblSecondaryOutputGain = JLabel("Secondary Output Gain:")
         val separator = JSeparator().apply { foreground = Color.BLACK }
 
-        val micInjectorGain = Utils.getMicInjectorGain().toInt()
+        val micInjectorGain = Utils.micInjectorGain.toInt()
         val primaryGain = AudioManager.getFirstOutputGain().toInt()
         val secondaryGain = AudioManager.getSecondOutputGain().toInt()
 
@@ -73,7 +73,7 @@ class AudioLevelsFrame : JFrame() {
             addChangeListener {
                 if (!valueIsAdjusting) {
                     val gain = value.toFloat()
-                    Utils.setMicInjectorGain(gain)
+                    Utils.micInjectorGain = gain
                 }
             }
         }

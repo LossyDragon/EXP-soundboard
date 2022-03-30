@@ -1,126 +1,114 @@
-package ca.exp.soundboard.rewrite.soundboard;
+package ca.exp.soundboard.rewrite.soundboard
 
-import org.jnativehook.keyboard.NativeKeyEvent;
+import org.jnativehook.keyboard.NativeKeyEvent
+import java.io.File
+import java.io.UnsupportedEncodingException
+import java.nio.file.Paths
 
-import java.io.File;
-import java.io.UnsupportedEncodingException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Iterator;
+class SoundboardEntry(file: File, keys: IntArray?) {
 
-public class SoundboardEntry {
-    public int[] activationKeysNumbers;
-    private String file;
+    var activationKeys: IntArray?
 
-    public SoundboardEntry(File file, int[] keys) {
-        Path p = Paths.get(file.getAbsolutePath());
-        this.file = p.toAbsolutePath().toString();
-        this.activationKeysNumbers = keys;
-        if (this.activationKeysNumbers == null) {
-            this.activationKeysNumbers = new int[0];
+    var fileString: String
+        private set
+
+    val fileName: String
+        get() = fileString.substring(fileString.lastIndexOf(File.separatorChar) + 1)
+
+    val activationKeysAsReadableString: String
+        get() {
+            var s = ""
+            if (activationKeys!!.isEmpty())
+                return s
+
+            var arrayOfInt: IntArray
+            val j = activationKeys.also { arrayOfInt = it!! }!!.size
+
+            for (i in 0 until j) {
+                val i2 = arrayOfInt[i]
+                s = s + NativeKeyEvent.getKeyText(i2) + "+"
+            }
+
+            s = s.substring(0, s.length - 1)
+
+            return s
         }
+
+    init {
+        val p = Paths.get(file.absolutePath)
+
+        fileString = p.toAbsolutePath().toString()
+        activationKeys = keys
+
+        if (activationKeys == null)
+            activationKeys = IntArray(0)
     }
 
-    public boolean matchesPressed(ArrayList<Integer> pressedKeys) {
-        int keysRemaining = this.activationKeysNumbers.length;
+    fun matchesPressed(pressedKeys: ArrayList<Int>): Boolean {
+        var keysRemaining = activationKeys!!.size
+
         if (keysRemaining == 0)
-            return false;
-        int[] arrayOfInt;
-        int j = (arrayOfInt = this.activationKeysNumbers).length;
-        for (int i = 0; i < j; i++) {
-            int actkey = arrayOfInt[i];
-            for (Iterator localIterator = pressedKeys.iterator(); localIterator.hasNext(); ) {
-                int presskey = ((Integer) localIterator.next()).intValue();
+            return false
+
+        var arrayOfInt: IntArray
+        val j = activationKeys.also { arrayOfInt = it!! }!!.size
+
+        for (i in 0 until j) {
+            val actkey = arrayOfInt[i]
+            val localIterator: Iterator<*> = pressedKeys.iterator()
+
+            while (localIterator.hasNext()) {
+                val presskey = (localIterator.next() as Int).toInt()
+
                 if (actkey == presskey) {
-                    keysRemaining--;
+                    keysRemaining--
                 }
             }
         }
 
-        return keysRemaining <= 0;
+        return keysRemaining <= 0
     }
 
-    /*
-     * public int matchesHowManyPressed(ArrayList<Integer> pressedKeys) { int
-     * matches = 0; int j; int i; for (Iterator localIterator =
-     * pressedKeys.iterator(); localIterator.hasNext(); i < j) { int key =
-     * ((Integer)localIterator.next()).intValue(); int[] arrayOfInt; j = (arrayOfInt
-     * = this.activationKeysNumbers).length;i = 0; continue;int hotkey =
-     * arrayOfInt[i]; if (key == hotkey) { matches++; } i++; }
-     *
-     *
-     *
-     *
-     * return matches; }
-     */
+    fun matchesHowManyPressed(pressedKeys: ArrayList<Int>): Int {
+        var matches = 0
 
-    public int matchesHowManyPressed(ArrayList<Integer> pressedKeys) {
-        int matches = 0;
-        for (int i = 0; i < pressedKeys.size(); i++) {
-            int[] arrayOfInt;
-            int len = (arrayOfInt = this.activationKeysNumbers).length;
-            int key = pressedKeys.get(i).intValue();
+        for (i in pressedKeys.indices) {
+            var arrayOfInt: IntArray
+            val len = activationKeys.also { arrayOfInt = it!! }!!.size
+            val key = pressedKeys[i]
+
             if (i < len) {
-                int hotkey = arrayOfInt[i];
+                val hotkey = arrayOfInt[i]
                 if (key == hotkey) {
-                    matches++;
+                    matches++
                 }
             }
         }
-        return matches;
+
+        return matches
     }
 
-    public void play(AudioManager audio, boolean moddedspeed) {
-        File file = toFile();
-        audio.playSoundClip(file, moddedspeed);
+    fun play(audio: AudioManager, moddedspeed: Boolean) {
+        val file = toFile()
+        audio.playSoundClip(file, moddedspeed)
     }
 
-    public File toFile() {
-        File f = new File(this.file);
+    private fun toFile(): File {
+        val f = File(fileString)
+
         if (!f.exists()) {
-            Path p = Paths.get(this.file);
-            return p.toFile();
+            val p = Paths.get(fileString)
+            return p.toFile()
         }
-        return f;
+
+        return f
     }
 
-    public void setFile(File file) {
+    fun setFile(file: File) {
         try {
-            this.file = new String(file.getAbsolutePath().getBytes(Utils.fileEncoding));
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
+            fileString = String(file.absolutePath.toByteArray(charset(Utils.fileEncoding)))
+        } catch (e: UnsupportedEncodingException) {
+            e.printStackTrace()
         }
-    }
-
-    public String getFileString() {
-        return this.file;
-    }
-
-    public String getFileName() {
-        char seperator = File.separatorChar;
-        return this.file.substring(this.file.lastIndexOf(seperator) + 1);
-    }
-
-    public int[] getActivationKeys() {
-        return this.activationKeysNumbers;
-    }
-
-    public void setActivationKeys(int[] activationKeys) {
-        this.activationKeysNumbers = activationKeys;
-    }
-
-    public String getActivationKeysAsReadableString() {
-        String s = "";
-        if (this.activationKeysNumbers.length == 0)
-            return s;
-        int[] arrayOfInt;
-        int j = (arrayOfInt = getActivationKeys()).length;
-        for (int i = 0; i < j; i++) {
-            int i2 = arrayOfInt[i];
-            s = s.concat(NativeKeyEvent.getKeyText(i2) + "+");
-        }
-        s = s.substring(0, s.length() - 1);
-        return s;
     }
 }

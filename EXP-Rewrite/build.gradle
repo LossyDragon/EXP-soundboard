@@ -1,6 +1,7 @@
 plugins {
     id 'application'
     id 'org.jetbrains.kotlin.jvm' version '1.6.10'
+    id "org.jlleitschuh.gradle.ktlint" version '10.2.1'
 }
 
 group = 'ca.exp.soundboard.rewrite'
@@ -17,6 +18,10 @@ repositories {
 application {
     mainModule = 'ca.exp.soundboard.rewrite'
     mainClass = 'ca.exp.soundboard.rewrite.Main'
+}
+
+ktlint {
+    disabledRules = ["no-wildcard-imports"]
 }
 
 [compileKotlin, compileTestKotlin].forEach {

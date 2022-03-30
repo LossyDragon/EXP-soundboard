@@ -1,148 +1,154 @@
-package ca.exp.soundboard.rewrite.soundboard;
+package ca.exp.soundboard.rewrite.soundboard
 
-import com.google.gson.Gson;
-import org.jnativehook.keyboard.NativeKeyEvent;
+import ca.exp.soundboard.rewrite.soundboard.KeyEventIntConverter.getKeyEventText
+import com.google.gson.Gson
+import org.jnativehook.keyboard.NativeKeyEvent
+import java.io.*
+import java.util.*
 
-import java.io.*;
-import java.util.ArrayList;
+class Soundboard {
+    val soundboardEntries: ArrayList<SoundboardEntry> = ArrayList()
+    val entriesAsObjectArrayForTable: Array<Array<Any?>>
+        get() {
+            val array = Array(soundboardEntries.size) { arrayOfNulls<Any>(4) }
 
-public class Soundboard {
-    private static ArrayList<SoundboardEntry> soundboardEntriesClone = new ArrayList<SoundboardEntry>();
-    private static boolean containsPPTKey = false;
-    private static ArrayList<Integer> pttKeysClone = new ArrayList<Integer>();
+            for (i in array.indices) {
+                val entry = soundboardEntries[i]
+                array[i][0] = entry.fileName
+                array[i][1] = entry.activationKeysAsReadableString
+                array[i][2] = entry.fileString
+                array[i][3] = Integer.valueOf(i)
+            }
 
-    private ArrayList<SoundboardEntry> soundboardEntries;
-
-    public Soundboard() {
-        this.soundboardEntries = new ArrayList<SoundboardEntry>();
-    }
-
-    public static Soundboard loadFromJsonFile(File file) {
-        BufferedReader br = null;
-        try {
-            br = new BufferedReader(new FileReader(file));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
+            return array
         }
-        Gson json = new Gson();
 
-        Soundboard sb = json.fromJson(br, Soundboard.class);
-        try {
-            br.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return sb;
+    fun addEntry(file: File, keyNumbers: IntArray?) {
+        soundboardEntries.add(SoundboardEntry(file, keyNumbers))
     }
 
-    public Object[][] getEntriesAsObjectArrayForTable() {
-        Object[][] array = new Object[soundboardEntries.size()][4];
-        for (int i = 0; i < array.length; i++) {
-            SoundboardEntry entry = soundboardEntries.get(i);
-            array[i][0] = entry.getFileName();
-            array[i][1] = entry.getActivationKeysAsReadableString();
-            array[i][2] = entry.getFileString();
-            array[i][3] = Integer.valueOf(i);
-        }
-        return array;
-    }
-
-    public void addEntry(File file, int[] keyNumbers) {
-        this.soundboardEntries.add(new SoundboardEntry(file, keyNumbers));
-    }
-
-    public SoundboardEntry getEntry(String filename) {
-        for (SoundboardEntry entry : soundboardEntries) {
-            if (entry.getFileName().equals(filename)) {
-                return entry;
+    fun getEntry(filename: String): SoundboardEntry? {
+        for (entry in soundboardEntries) {
+            if (entry.fileName == filename) {
+                return entry
             }
         }
-        return null;
+
+        return null
     }
 
-    public void removeEntry(int index) {
-        soundboardEntries.remove(index);
+    fun removeEntry(index: Int) {
+        soundboardEntries.removeAt(index)
     }
 
-    public void removeEntry(String filename) {
-        for (SoundboardEntry entry : soundboardEntries) {
-            if (entry.getFileName().equals(filename)) {
-                soundboardEntries.remove(entry);
-                break;
+    fun removeEntry(filename: String) {
+        for (entry in soundboardEntries) {
+            if (entry.fileName == filename) {
+                soundboardEntries.remove(entry)
+
+                break
             }
         }
     }
 
-    public ArrayList<SoundboardEntry> getSoundboardEntries() {
-        return soundboardEntries;
-    }
+    fun saveAsJsonFile(file: File): File {
+        var filestring = file.absolutePath
+        println(filestring)
 
-    public File saveAsJsonFile(File file) {
-        String filestring = file.getAbsolutePath();
-        System.out.println(filestring);
         if (filestring.contains(".")) {
-            filestring = filestring.substring(0, filestring.lastIndexOf('.'));
+            filestring = filestring.substring(0, filestring.lastIndexOf('.'))
         }
-        filestring = filestring + ".json";
-        System.out.println("amended: " + filestring);
-        Gson gson = new Gson();
 
-        String json = gson.toJson(this);
-        File realfile = new File(filestring);
-        BufferedWriter writer = null;
+        filestring = "$filestring.json"
+        println("amended: $filestring")
+
+        val gson = Gson()
+        val json = gson.toJson(this)
+        val realFile = File(filestring)
+        val writer: BufferedWriter?
+
         try {
-            writer = new BufferedWriter(new FileWriter(realfile));
-            writer.write(json);
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
+            writer = BufferedWriter(FileWriter(realFile))
+            writer.write(json)
+            writer.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
         }
-        return realfile;
+
+        return realFile
     }
 
-    public SoundboardEntry getEntry(int index) {
+    fun getEntry(index: Int): SoundboardEntry? {
         try {
-            return soundboardEntries.get(index);
-        } catch (ArrayIndexOutOfBoundsException e) {
-            e.printStackTrace();
+            return soundboardEntries[index]
+        } catch (e: ArrayIndexOutOfBoundsException) {
+            e.printStackTrace()
         }
 
-        return null;
+        return null
     }
 
-    public boolean entriesContainPTTKeys(ArrayList<Integer> pttkeys) {
-        if ((!pttkeys.equals(pttKeysClone)) || (hasSoundboardChanged())) {
-            soundboardEntriesClone = (ArrayList<SoundboardEntry>) soundboardEntries.clone();
-            pttKeysClone = (ArrayList<Integer>) pttkeys.clone();
-            String key = null;
-            int j;
-            int i;
-            for (SoundboardEntry entry : soundboardEntries) {
-                int[] arrayOfInt;
-                j = (arrayOfInt = entry.getActivationKeys()).length;
-                i = 0;
-                //continue;
-                int actKey = arrayOfInt[i];
-                key = NativeKeyEvent.getKeyText(actKey).toLowerCase();
-                for (Integer number : pttkeys) {
-                    if (key.equals(KeyEventIntConverter.getKeyEventText(number.intValue()).toLowerCase())) {
-                        containsPPTKey = true;
-                        return true;
+    fun entriesContainPTTKeys(pttkeys: List<Int>): Boolean {
+        if (pttkeys != pttKeysClone || hasSoundboardChanged()) {
+            soundboardEntriesClone = soundboardEntries
+            pttKeysClone = pttkeys as ArrayList<Int>
+            var key: String?
+
+            for ((i, entry) in soundboardEntries.withIndex()) {
+                var arrayOfInt: IntArray
+                entry.activationKeys.also { arrayOfInt = it!! }!!.size
+                val actKey = arrayOfInt[i]
+                key = NativeKeyEvent.getKeyText(actKey).lowercase(Locale.getDefault())
+                for (number in pttkeys) {
+                    if (key == getKeyEventText(number).lowercase(Locale.getDefault())) {
+                        containsPPTKey = true
+
+                        return true
                     }
                 }
-                i++;
             }
-            containsPPTKey = false;
-            return false;
+
+            containsPPTKey = false
+
+            return false
         }
-        return containsPPTKey;
+
+        return containsPPTKey
     }
 
-    public boolean hasSoundboardChanged() {
-        if (!this.soundboardEntries.equals(soundboardEntriesClone)) {
-            System.out.println("SoundboardStage changed");
-            return true;
+    private fun hasSoundboardChanged(): Boolean {
+        if (soundboardEntries != soundboardEntriesClone) {
+            println("SoundboardStage changed")
+            return true
         }
-        return false;
+
+        return false
+    }
+
+    companion object {
+        private var containsPPTKey = false
+        private var pttKeysClone = ArrayList<Int>()
+        private var soundboardEntriesClone = ArrayList<SoundboardEntry>()
+
+        fun loadFromJsonFile(file: File): Soundboard {
+            var br: BufferedReader? = null
+
+            try {
+                br = BufferedReader(FileReader(file))
+            } catch (e: FileNotFoundException) {
+                e.printStackTrace()
+            }
+
+            val json = Gson()
+            val sb = json.fromJson(br, Soundboard::class.java)
+
+            try {
+                br!!.close()
+            } catch (e: IOException) {
+                e.printStackTrace()
+            }
+
+            return sb
+        }
     }
 }

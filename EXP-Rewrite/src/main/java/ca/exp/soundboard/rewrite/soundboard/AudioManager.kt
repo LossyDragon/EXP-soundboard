@@ -1,117 +1,134 @@
-package ca.exp.soundboard.rewrite.soundboard;
+package ca.exp.soundboard.rewrite.soundboard
 
-import javax.sound.sampled.*;
-import javax.swing.*;
-import java.io.File;
+import ca.exp.soundboard.rewrite.soundboard.Utils.getMixerNames
+import java.io.File
+import javax.sound.sampled.*
+import javax.swing.JOptionPane
 
-public class AudioManager {
-    private static final int INTERNAL_BUFFER_SIZE = 8192;
-    private static float firstOutputGain;
-    private static float secondOutputGain;
-    public final DataLine.Info standardDataLineInfo;
-    Mixer primaryOutput;
-    Mixer secondaryOutput;
-    private boolean useSecondary = false;
+class AudioManager {
 
-    public AudioManager() {
-        this.standardDataLineInfo = new DataLine.Info(SourceDataLine.class, Utils.format, 2048);
-    }
+    private var primaryOutput: Mixer? = null
+    private var secondaryOutput: Mixer? = null
+    private var useSecondary = false
+    val standardDataLineInfo: DataLine.Info = DataLine.Info(SourceDataLine::class.java, Utils.format, 2048)
 
-    public static float getFirstOutputGain() {
-        return firstOutputGain;
-    }
+    fun playSoundClip(file: File, halfSpeed: Boolean) {
+        val format: AudioFormat? = if (halfSpeed) Utils.modifiedPlaybackFormat else Utils.format
 
-    public static void setFirstOutputGain(float firstOutputGain) {
-        firstOutputGain = firstOutputGain;
-    }
+        if (file.exists() && file.canRead()) {
+            var primarySpeaker: SourceDataLine? = null
+            var secondarySpeaker: SourceDataLine? = null
 
-    public static float getSecondOutputGain() {
-        return secondOutputGain;
-    }
-
-    public static void setSecondOutputGain(float secondOutputGain) {
-        secondOutputGain = secondOutputGain;
-    }
-
-    void playSoundClip(File file, boolean halfspeed) {
-        AudioFormat format;
-
-        if (halfspeed) {
-            format = Utils.modifiedPlaybackFormat;
-        } else {
-            format = Utils.format;
-        }
-        if ((file.exists()) && (file.canRead())) {
-            SourceDataLine primarySpeaker = null;
-            SourceDataLine secondarySpeaker = null;
             try {
-                primarySpeaker = (SourceDataLine) this.primaryOutput.getLine(this.standardDataLineInfo);
-                primarySpeaker.open(format, 8192);
-                FloatControl gain = (FloatControl) primarySpeaker.getControl(FloatControl.Type.MASTER_GAIN);
-                gain.setValue(firstOutputGain);
-                primarySpeaker.start();
-            } catch (LineUnavailableException ex) {
-                JOptionPane.showMessageDialog(null, "Selected Output Line: Primary Speaker is currently unavailable.",
-                        "Line Unavailable Exception", 0);
+                primarySpeaker = primaryOutput!!.getLine(standardDataLineInfo) as SourceDataLine
+                primarySpeaker.open(format, 8192)
+
+                val gain = primarySpeaker.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
+                gain.value = firstOutputGain
+
+                primarySpeaker.start()
+            } catch (ex: LineUnavailableException) {
+                JOptionPane.showMessageDialog(
+                    null,
+                    "Selected Output Line: Primary Speaker is currently unavailable.",
+                    "Line Unavailable Exception",
+                    0
+                )
             }
-            if ((this.secondaryOutput != null) && (this.useSecondary)) {
+
+            if (secondaryOutput != null && useSecondary) {
                 try {
-                    secondarySpeaker = (SourceDataLine) this.secondaryOutput.getLine(this.standardDataLineInfo);
-                    secondarySpeaker.open(format, 8192);
-                    FloatControl gain = (FloatControl) secondarySpeaker.getControl(FloatControl.Type.MASTER_GAIN);
-                    gain.setValue(secondOutputGain);
-                    secondarySpeaker.start();
-                } catch (LineUnavailableException ex) {
-                    JOptionPane.showMessageDialog(null,
-                            "Selected Output Line: Secondary Speaker is currently unavailable.",
-                            "Line Unavailable Exception", 0);
+                    secondarySpeaker = secondaryOutput!!.getLine(standardDataLineInfo) as SourceDataLine
+                    secondarySpeaker.open(format, 8192)
+
+                    val gain = secondarySpeaker.getControl(FloatControl.Type.MASTER_GAIN) as FloatControl
+                    gain.value = secondOutputGain
+
+                    secondarySpeaker.start()
+                } catch (ex: LineUnavailableException) {
+                    JOptionPane.showMessageDialog(
+                        null,
+                        "Selected Output Line: Secondary Speaker is currently unavailable.",
+                        "Line Unavailable Exception",
+                        0
+                    )
                 }
             }
-            Utils.playNewSoundClipThreaded(file, primarySpeaker, secondarySpeaker);
+
+            Utils.playNewSoundClipThreaded(file, primarySpeaker, secondarySpeaker)
         }
     }
 
-    public synchronized void setPrimaryOutputMixer(String mixerName) {
-        String[] mixers = Utils.getMixerNames(this.standardDataLineInfo);
-        String[] arrayOfString1;
-        int j = (arrayOfString1 = mixers).length;
-        for (int i = 0; i < j; i++) {
-            String x = arrayOfString1[i];
-            Mixer.Info[] arrayOfInfo;
-            int m = (arrayOfInfo = AudioSystem.getMixerInfo()).length;
-            for (int k = 0; k < m; k++) {
-                Mixer.Info mixerInfo = arrayOfInfo[k];
-                if (mixerName.equals(mixerInfo.getName())) {
-                    this.primaryOutput = AudioSystem.getMixer(mixerInfo);
-                    return;
+    @Synchronized
+    fun setPrimaryOutputMixer(mixerName: String) {
+        val mixers = getMixerNames(standardDataLineInfo)
+        var arrayOfString1: Array<String?>
+        val j = mixers.also { arrayOfString1 = it }.size
+
+        for (i in 0 until j) {
+            var arrayOfInfo: Array<Mixer.Info>
+            val m = AudioSystem.getMixerInfo().also { arrayOfInfo = it }.size
+
+            for (k in 0 until m) {
+                val mixerInfo = arrayOfInfo[k]
+                if (mixerName == mixerInfo.name) {
+                    primaryOutput = AudioSystem.getMixer(mixerInfo)
+
+                    return
                 }
             }
         }
     }
 
-    public void setUseSecondary(boolean use) {
-        this.useSecondary = use;
+    fun setUseSecondary(use: Boolean) {
+        useSecondary = use
     }
 
-    public boolean useSecondary() {
-        return this.useSecondary;
+    fun useSecondary(): Boolean {
+        return useSecondary
     }
 
-    public synchronized void setSecondaryOutputMixer(String mixerName) {
-        String[] mixers = Utils.getMixerNames(this.standardDataLineInfo);
-        String[] arrayOfString1;
-        int j = (arrayOfString1 = mixers).length;
-        for (int i = 0; i < j; i++) {
-            String x = arrayOfString1[i];
-            Mixer.Info[] arrayOfInfo;
-            int m = (arrayOfInfo = AudioSystem.getMixerInfo()).length;
-            for (int k = 0; k < m; k++) {
-                Mixer.Info mixerInfo = arrayOfInfo[k];
-                if (mixerName.equals(mixerInfo.getName())) {
-                    this.secondaryOutput = AudioSystem.getMixer(mixerInfo);
-                    return;
+    @Synchronized
+    fun setSecondaryOutputMixer(mixerName: String) {
+        val mixers = getMixerNames(standardDataLineInfo)
+        var arrayOfString1: Array<String?>
+        val j = mixers.also { arrayOfString1 = it }.size
+
+        for (i in 0 until j) {
+            arrayOfString1[i]
+            var arrayOfInfo: Array<Mixer.Info>
+            val m = AudioSystem.getMixerInfo().also { arrayOfInfo = it }.size
+
+            for (k in 0 until m) {
+                val mixerInfo = arrayOfInfo[k]
+                if (mixerName == mixerInfo.name) {
+                    secondaryOutput = AudioSystem.getMixer(mixerInfo)
+
+                    return
                 }
             }
+        }
+    }
+
+    companion object {
+        private const val INTERNAL_BUFFER_SIZE = 8192
+        private var firstOutputGain = 0f
+        private var secondOutputGain = 0f
+
+        fun getFirstOutputGain(): Float {
+            return firstOutputGain
+        }
+
+        fun setFirstOutputGain(firstOutputGain: Float) {
+            this.firstOutputGain = firstOutputGain
+        }
+
+        fun getSecondOutputGain(): Float {
+            return secondOutputGain
+        }
+
+        fun setSecondOutputGain(secondOutputGain: Float) {
+            this.secondOutputGain = secondOutputGain
         }
     }
 }

@@ -62,7 +62,7 @@ class SettingsFrame private constructor() : JFrame() {
         stopAllTextField = JTextField().apply {
             columns = 10
             isEditable = false
-            text = NativeKeyEvent.getKeyText(Utils.getStopKey())
+            text = NativeKeyEvent.getKeyText(Utils.stopKey)
             addFocusListener(object : FocusAdapter() {
                 override fun focusLost(arg0: FocusEvent) {
                     // GlobalScreen.getInstance().removeNativeKeyListener(SettingsFrame.this.stopKeyInputGetter);
@@ -81,7 +81,7 @@ class SettingsFrame private constructor() : JFrame() {
         slowKeyTextField = JTextField().apply {
             columns = 10
             isEditable = false
-            text = NativeKeyEvent.getKeyText(Utils.getModifiedSpeedKey())
+            text = NativeKeyEvent.getKeyText(Utils.modifiedSpeedKey)
             addFocusListener(object : FocusAdapter() {
                 override fun focusLost(e: FocusEvent) {
                     GlobalScreen.removeNativeKeyListener(slowKeyInputGetter)
@@ -99,7 +99,7 @@ class SettingsFrame private constructor() : JFrame() {
         incModSpeedHotKeyTextField = JTextField().apply {
             columns = 10
             isEditable = false
-            text = NativeKeyEvent.getKeyText(Utils.getModspeedupKey())
+            text = NativeKeyEvent.getKeyText(Utils.modspeedupKey)
             addFocusListener(object : FocusAdapter() {
                 override fun focusLost(arg0: FocusEvent) {
                     GlobalScreen.removeNativeKeyListener(incKeyInputGetter)
@@ -117,7 +117,7 @@ class SettingsFrame private constructor() : JFrame() {
         decModSpeedHotKeyTextField = JTextField().apply {
             columns = 10
             isEditable = false
-            text = NativeKeyEvent.getKeyText(Utils.getModspeeddownKey())
+            text = NativeKeyEvent.getKeyText(Utils.modspeeddownKey)
             addFocusListener(object : FocusAdapter() {
                 override fun focusLost(e: FocusEvent) {
                     background = Color.WHITE
@@ -154,7 +154,7 @@ class SettingsFrame private constructor() : JFrame() {
         fOverlapHotkeyTextField = JTextField().apply {
             columns = 10
             isEditable = false
-            text = NativeKeyEvent.getKeyText(Utils.getOverlapSwitchKey())
+            text = NativeKeyEvent.getKeyText(Utils.overlapSwitchKey)
             addMouseListener(object : MouseAdapter() {
                 override fun mousePressed(e: MouseEvent) {
                     GlobalScreen.addNativeKeyListener(fOverlapKeyInputGetter)
@@ -173,7 +173,7 @@ class SettingsFrame private constructor() : JFrame() {
             isSelected = Utils.isOverlapSameClipWhilePlaying()
             addActionListener {
                 val selected = isSelected
-                Utils.setOverlapSameClipWhilePlaying(selected)
+                Utils.overlapSameClipWhilePlaying = selected
             }
         }
 
@@ -349,7 +349,7 @@ class SettingsFrame private constructor() : JFrame() {
 
         override fun nativeKeyPressed(e: NativeKeyEvent) {
             key = e.keyCode
-            Utils.setOverlapSwitchKey(key)
+            Utils.overlapSwitchKey = key
             updateTextField()
         }
 
@@ -359,13 +359,13 @@ class SettingsFrame private constructor() : JFrame() {
     }
 
     private inner class PttKeysNativeKeyInputGetter : KeyListener {
-        var pressedkeys: HashSet<Int?> = HashSet()
+        var pressedkeys: MutableList<Int> = mutableListOf()
 
         override fun keyPressed(e: KeyEvent) {
             val key = e.keyCode
             pressedkeys.add(Integer.valueOf(key))
 
-            Utils.setPTTkeys(pressedkeys)
+            Utils.pTTkeys = pressedkeys
             updateTextField()
 
             println("PPT listener key pressed: " + KeyEvent.getKeyText(key))
@@ -383,13 +383,13 @@ class SettingsFrame private constructor() : JFrame() {
         @Synchronized
         fun updateTextField() {
             val keyString = StringBuilder()
-            val keys = Utils.getPTTkeys()
+            val keys = Utils.pTTkeys
 
             for (i in keys.indices) {
                 if (i == 0) {
-                    keyString.append(KeyEvent.getKeyText(keys[i].toInt()))
+                    keyString.append(KeyEvent.getKeyText(keys[i]))
                 } else {
-                    keyString.append(" + " + KeyEvent.getKeyText(keys[i].toInt()))
+                    keyString.append(" + " + KeyEvent.getKeyText(keys[i]))
                 }
             }
 
@@ -405,11 +405,11 @@ class SettingsFrame private constructor() : JFrame() {
     }
 
     private inner class ModSpeedKeyNativeKeyInputGetter : NativeKeyListener {
-        var key = Utils.slowKey
+        var key = Utils.modifiedSpeedKey
 
         override fun nativeKeyPressed(e: NativeKeyEvent) {
             key = e.keyCode
-            Utils.setModifiedSpeedKey(key)
+            Utils.modifiedSpeedKey = key
             updateTextField()
         }
 
@@ -429,7 +429,7 @@ class SettingsFrame private constructor() : JFrame() {
 
         override fun nativeKeyPressed(e: NativeKeyEvent) {
             key = e.keyCode
-            Utils.setStopKey(key)
+            Utils.stopKey = key
             updateTextField()
         }
 
@@ -445,11 +445,11 @@ class SettingsFrame private constructor() : JFrame() {
     }
 
     private inner class IncKeyNativeKeyInputGetter : NativeKeyListener {
-        var key = Utils.getModspeedupKey()
+        var key = Utils.modspeedupKey
         override fun nativeKeyPressed(e: NativeKeyEvent) {
 
             key = e.keyCode
-            Utils.setModspeedupKey(key)
+            Utils.modspeedupKey = key
             updateTextField()
         }
 
@@ -465,11 +465,11 @@ class SettingsFrame private constructor() : JFrame() {
     }
 
     private inner class DecKeyNativeKeyInputGetter : NativeKeyListener {
-        var key = Utils.getModspeeddownKey()
+        var key = Utils.modspeeddownKey
 
         override fun nativeKeyPressed(e: NativeKeyEvent) {
             key = e.keyCode
-            Utils.setModspeeddownKey(key)
+            Utils.modspeeddownKey = key
             updateTextField()
         }
 
