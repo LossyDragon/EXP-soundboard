@@ -46,8 +46,6 @@ class SoundboardFrame : JFrame() {
         get() = SettingsFrame.instanceOf.setLocationRelativeTo(this)
 
     init {
-        println("Pref: " + Utils.prefs.absolutePath())
-
         addWindowListener(object : WindowAdapter() {
             override fun windowClosing(e: WindowEvent) {
                 exit()
@@ -148,7 +146,7 @@ class SoundboardFrame : JFrame() {
 
         val btnStop = JButton("Stop All").apply {
             addActionListener {
-                // TODO
+                Utils.stopAllClips()
             }
         }
 
@@ -162,7 +160,7 @@ class SoundboardFrame : JFrame() {
             foreground = Color.DARK_GRAY
         }
 
-        val lblndOutputeg = JLabel("2nd Output (e.g. virtual audio cable \"input\")(optional)").apply {
+        val lblndOutputeg = JLabel("2nd Output (e.g. virtual audio cable \"input\") (optional)").apply {
             foreground = Color.DARK_GRAY
         }
 
@@ -383,12 +381,10 @@ class SoundboardFrame : JFrame() {
     private fun open(jsonfile: File) {
         if (jsonfile.exists()) {
             val sb = Soundboard.loadFromJsonFile(jsonfile)
-            if (sb != null) {
-                soundboard = sb
-                updateSoundboardTable()
-                currentSoundboardFile = jsonfile
-                title = appTitle + currentSoundboardFile!!.name
-            }
+            soundboard = sb
+            updateSoundboardTable()
+            currentSoundboardFile = jsonfile
+            title = appTitle + currentSoundboardFile!!.name
         }
     }
 
