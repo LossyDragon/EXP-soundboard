@@ -26,7 +26,7 @@ object Utils {
     // const val modifiedSpeedIncrements = 0.05f
     // const val modifiedSpeedMax = 2.0f
     // const val modifiedSpeedMin = 0.1f
-    private const val prefsName = "ca.exp.soundboard"
+    private const val prefsName = "ca/exp/soundboard" // HKEY_CURRENT_USER\SOFTWARE\JavaSoft
     private val clipPlayerThreadGroup = ThreadGroup("Clip Player Group")
     private val lastNativeKeyPressMap = ConcurrentHashMap<String, Long>()
     private val lastRobotKeyPressMap = ConcurrentHashMap<String, Long>()
