@@ -106,7 +106,7 @@ class SoundboardEntry(file: File, keys: IntArray?) {
 
     fun setFile(file: File) {
         try {
-            fileString = String(file.absolutePath.toByteArray(charset(Utils.fileEncoding)))
+            fileString = file.absolutePath.toByteArray(charset(Utils.fileEncoding)).toString()
         } catch (e: UnsupportedEncodingException) {
             e.printStackTrace()
         }

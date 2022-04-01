@@ -7,7 +7,9 @@ import java.io.*
 import java.util.*
 
 class Soundboard {
+
     val soundboardEntries: ArrayList<SoundboardEntry> = ArrayList()
+
     val entriesAsObjectArrayForTable: Array<Array<Any?>>
         get() {
             val array = Array(soundboardEntries.size) { arrayOfNulls<Any>(4) }

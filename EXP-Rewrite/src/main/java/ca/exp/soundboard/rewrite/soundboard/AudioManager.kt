@@ -10,7 +10,7 @@ class AudioManager {
     private var primaryOutput: Mixer? = null
     private var secondaryOutput: Mixer? = null
     private var useSecondary = false
-    val standardDataLineInfo: DataLine.Info = DataLine.Info(SourceDataLine::class.java, Utils.format, 2048)
+    val standardDataLineInfo = DataLine.Info(SourceDataLine::class.java, Utils.format, 2048)
 
     fun playSoundClip(file: File, halfSpeed: Boolean) {
         val format: AudioFormat? = if (halfSpeed) Utils.modifiedPlaybackFormat else Utils.format
@@ -29,10 +29,10 @@ class AudioManager {
                 primarySpeaker.start()
             } catch (ex: LineUnavailableException) {
                 JOptionPane.showMessageDialog(
-                    null,
-                    "Selected Output Line: Primary Speaker is currently unavailable.",
-                    "Line Unavailable Exception",
-                    0
+                    /* parentComponent = */ null,
+                    /* message = */ "Selected Output Line: Primary Speaker is currently unavailable.",
+                    /* title = */ "Line Unavailable Exception",
+                    /* messageType = */ 0
                 )
             }
 
@@ -47,10 +47,10 @@ class AudioManager {
                     secondarySpeaker.start()
                 } catch (ex: LineUnavailableException) {
                     JOptionPane.showMessageDialog(
-                        null,
-                        "Selected Output Line: Secondary Speaker is currently unavailable.",
-                        "Line Unavailable Exception",
-                        0
+                        /* parentComponent = */ null,
+                        /* message = */ "Selected Output Line: Secondary Speaker is currently unavailable.",
+                        /* title = */ "Line Unavailable Exception",
+                        /* messageType = */ 0
                     )
                 }
             }
@@ -62,10 +62,8 @@ class AudioManager {
     @Synchronized
     fun setPrimaryOutputMixer(mixerName: String) {
         val mixers = getMixerNames(standardDataLineInfo)
-        var arrayOfString1: Array<String?>
-        val j = mixers.also { arrayOfString1 = it }.size
 
-        for (i in 0 until j) {
+        for (i in mixers.indices) {
             var arrayOfInfo: Array<Mixer.Info>
             val m = AudioSystem.getMixerInfo().also { arrayOfInfo = it }.size
 
@@ -91,15 +89,12 @@ class AudioManager {
     @Synchronized
     fun setSecondaryOutputMixer(mixerName: String) {
         val mixers = getMixerNames(standardDataLineInfo)
-        var arrayOfString1: Array<String?>
-        val j = mixers.also { arrayOfString1 = it }.size
 
-        for (i in 0 until j) {
-            arrayOfString1[i]
+        for (i in mixers.indices) {
             var arrayOfInfo: Array<Mixer.Info>
-            val m = AudioSystem.getMixerInfo().also { arrayOfInfo = it }.size
+            val info = AudioSystem.getMixerInfo().also { arrayOfInfo = it }.size
 
-            for (k in 0 until m) {
+            for (k in 0 until info) {
                 val mixerInfo = arrayOfInfo[k]
                 if (mixerName == mixerInfo.name) {
                     secondaryOutput = AudioSystem.getMixer(mixerInfo)
@@ -111,7 +106,7 @@ class AudioManager {
     }
 
     companion object {
-        private const val INTERNAL_BUFFER_SIZE = 8192
+        // private const val INTERNAL_BUFFER_SIZE = 8192
         private var firstOutputGain = 0f
         private var secondOutputGain = 0f
 

@@ -21,22 +21,24 @@ import javax.swing.SwingUtilities
 
 object Utils {
 
-    // const val BUFFERSIZE = 2048
-    // const val STANDARDSAMPLERATE = 44100.0f
-    // const val modifiedSpeedIncrements = 0.05f
-    // const val modifiedSpeedMax = 2.0f
-    // const val modifiedSpeedMin = 0.1f
+    private const val BUFFERSIZE = 2048
+    private const val STANDARDSAMPLERATE = 44100.0f
+    private const val modifiedSpeedIncrements = 0.05f
+    private const val modifiedSpeedMax = 2.0f
+    private const val modifiedSpeedMin = 0.1f
     private const val prefsName = "ca/exp/soundboard" // HKEY_CURRENT_USER\SOFTWARE\JavaSoft
+
     private val clipPlayerThreadGroup = ThreadGroup("Clip Player Group")
     private val lastNativeKeyPressMap = ConcurrentHashMap<String, Long>()
     private val lastRobotKeyPressMap = ConcurrentHashMap<String, Long>()
     private var PLAYALL = true
-    private var microphoneInjector = MicInjector()
     private var currentlyPlayingClipCount = 0
+    private var microphoneInjector = MicInjector()
     private var modifiedPlaybackSpeed = 0f
     private var pttkeys = listOf<Int>()
     private var robot: Robot? = null
-    val format = AudioFormat(AudioFormat.Encoding.PCM_SIGNED, 44100.0f, 16, 2, 4, 44100.0f, false)
+
+    val format = AudioFormat(AudioFormat.Encoding.PCM_SIGNED, STANDARDSAMPLERATE, 16, 2, 4, STANDARDSAMPLERATE, false)
     val prefs: Preferences = Preferences.userRoot().node(prefsName)
     var fileEncoding: String = System.getProperty("file.encoding")
     var isAutoPTThold = true
@@ -46,6 +48,9 @@ object Utils {
     var modspeedupKey = 39
     var overlapSwitchKey = 36
     var stopKey = 19
+
+    private val isMicInjectorRunning: Boolean
+        get() = micInjector.isRunning
 
     private val micInjector: MicInjector
         get() = microphoneInjector
@@ -64,8 +69,11 @@ object Utils {
             field = value
         }
 
-    private val isMicInjectorRunning: Boolean
-        get() = micInjector.isRunning
+    var pTTkeys: List<Int>
+        get() = pttkeys
+        set(value) {
+            pttkeys = value
+        }
 
     fun getFileChooser(): JFileChooser {
         return SoundboardFrame.filechooser
@@ -76,14 +84,14 @@ object Utils {
             if (robot != null) {
                 return robot
             }
+
             try {
                 robot = Robot()
             } catch (e: AWTException) {
                 e.printStackTrace()
             }
-            return if (robot != null) {
-                robot
-            } else null
+
+            return if (robot != null) robot else null
         }
 
     fun playNewSoundClipThreaded(file: File, primarySpeaker: SourceDataLine?, secondarySpeaker: SourceDataLine?) {
@@ -165,30 +173,19 @@ object Utils {
         micInjector.stopRunning()
     }
 
-    fun startMp3Decoder() {
-        val loaderfile = ClipPlayer::class.java.getResourceAsStream("loader.mp3")
-        try {
-            AudioSystem.getAudioFileFormat(loaderfile)
-            val stream = AudioSystem.getAudioInputStream(loaderfile)
-            stream.close()
-        } catch (e: UnsupportedAudioFileException) {
-            e.printStackTrace()
-        } catch (e: IOException) {
-            e.printStackTrace()
-        }
-    }
-
     fun initGlobalKeyLibrary(): Boolean {
         try {
             GlobalScreen.registerNativeHook()
         } catch (ex: NativeHookException) {
             System.err.println("There was a problem registering the native hook.")
             System.err.println(ex.message)
+
             JOptionPane.showMessageDialog(
                 null, "Error: " + ex.message,
                 "Error occured whilst initiating global hotkeys", 0
             )
         }
+
         return true
     }
 
@@ -199,20 +196,24 @@ object Utils {
             } catch (e: NativeHookException) {
                 e.printStackTrace()
             }
+
             return true
         }
+
         return false
     }
 
     fun isFileSupported(file: File?): Boolean {
         try {
             AudioSystem.getAudioFileFormat(file)
+
             return true
         } catch (e: UnsupportedAudioFileException) {
             e.printStackTrace()
         } catch (e: IOException) {
             e.printStackTrace()
         }
+
         return false
     }
 
@@ -224,7 +225,7 @@ object Utils {
     @Synchronized
     fun setModifiedPlaybackSpeed(speed: Float) {
         modifiedPlaybackSpeed = speed
-        val newSampleRate = 44100.0f * speed
+        val newSampleRate = STANDARDSAMPLERATE * speed
         modifiedPlaybackFormat = AudioFormat(
             AudioFormat.Encoding.PCM_SIGNED, newSampleRate, 16, 2, 4,
             newSampleRate, false
@@ -232,9 +233,9 @@ object Utils {
     }
 
     fun incrementModSpeedUp() {
-        var speed = modifiedPlaybackSpeed + 0.05f
-        if (speed > 2.0f) {
-            speed = 2.0f
+        var speed = modifiedPlaybackSpeed + modifiedSpeedIncrements
+        if (speed > modifiedSpeedMax) {
+            speed = modifiedSpeedMax
         }
         setModifiedPlaybackSpeed(speed)
         if (SettingsFrame.instance != null) {
@@ -243,9 +244,9 @@ object Utils {
     }
 
     fun decrementModSpeedDown() {
-        var speed = modifiedPlaybackSpeed - 0.05f
-        if (speed < 0.1f) {
-            speed = 0.1f
+        var speed = modifiedPlaybackSpeed - modifiedSpeedIncrements
+        if (speed < modifiedSpeedMin) {
+            speed = modifiedSpeedMin
         }
         setModifiedPlaybackSpeed(speed)
         if (SettingsFrame.instance != null) {
@@ -272,7 +273,7 @@ object Utils {
 
             for (nativekey in pressed) {
                 if (getKeyEventText(key).lowercase(Locale.getDefault()) ==
-                    NativeKeyEvent.getKeyText(nativekey).lowercase(Locale.getDefault())
+                    NativeKeyEvent.getKeyText(nativekey!!).lowercase(Locale.getDefault())
                 ) {
                     pressedAlready = true
 
@@ -323,12 +324,6 @@ object Utils {
         return true
     }
 
-    var pTTkeys: List<Int>
-        get() = pttkeys
-        set(value) {
-            pttkeys = value
-        }
-
     @Synchronized
     fun incrementCurrentClipCount() {
         currentlyPlayingClipCount += 1
@@ -348,16 +343,13 @@ object Utils {
 
     fun stringToIntArrayList(string: String): ArrayList<Int> {
         val array = ArrayList<Int>()
-        val arrayString = string.replace('[', ' ').replace(']', ' ').trim { it <= ' ' }
-        val numberstring = arrayString.split(",").toTypedArray()
-        var arrayOfString1: Array<String>
-        val j = numberstring.also { arrayOfString1 = it }.size
+        val arrayString = string.replace('[', ' ').replace(']', ' ').trim()
+        val numberString = arrayString.split(",").toTypedArray()
 
-        for (i in 0 until j) {
-            val s = arrayOfString1[i]
-            if (s != "") {
-                val i2 = s.trim { it <= ' ' }.toInt()
-                array.add(Integer.valueOf(i2))
+        for (i in numberString.indices) {
+            if (numberString[i] != "") {
+                val i2 = numberString[i].trim().toInt()
+                array.add(i2)
             }
         }
 
@@ -374,17 +366,17 @@ object Utils {
         lastRobotKeyPressMap[key.lowercase(Locale.getDefault())] = time
     }
 
-    private fun getLastNativeKeyPressTimeForKey(keyname: String): Long {
-        return lastNativeKeyPressMap[keyname.lowercase(Locale.getDefault())] ?: return 0L
+    private fun getLastNativeKeyPressTimeForKey(keyName: String): Long {
+        return lastNativeKeyPressMap[keyName.lowercase(Locale.getDefault())] ?: return 0L
     }
 
-    private fun getLastRobotKeyPressTimeForKey(keyname: String): Long {
-        return lastRobotKeyPressMap[keyname.lowercase(Locale.getDefault())] ?: return 0L
+    private fun getLastRobotKeyPressTimeForKey(keyName: String): Long {
+        return lastRobotKeyPressMap[keyName.lowercase(Locale.getDefault())] ?: return 0L
     }
 
-    private fun wasKeyLastPressedByRobot(keyname: String): Boolean {
-        val human = getLastNativeKeyPressTimeForKey(keyname)
-        val robot = getLastRobotKeyPressTimeForKey(keyname)
+    private fun wasKeyLastPressedByRobot(keyName: String): Boolean {
+        val human = getLastNativeKeyPressTimeForKey(keyName)
+        val robot = getLastRobotKeyPressTimeForKey(keyName)
         return robot == human
     }
 
@@ -402,14 +394,13 @@ object Utils {
         println("Thread groups: " + clipPlayerThreadGroup.activeGroupCount())
         println("Requesting: $filepath to stop")
 
-        var arrayOfThread1: Array<Thread?>
-        val j = threads.also { arrayOfThread1 = it }.size
+        threads.forEach {
+            if (it == null)
+                return@forEach
 
-        for (i in 0 until j) {
-            val thread = arrayOfThread1[i]
-            println("thread name: " + thread?.name)
-            if (filepath == thread?.name) {
-                val cp = thread as ClipPlayer
+            println("thread name: " + it.name)
+            if (filepath == it.name) {
+                val cp = it as ClipPlayer
                 cp.stopPlaying()
                 stopped = true
             }
@@ -418,8 +409,11 @@ object Utils {
         return stopped
     }
 
-    private class ClipPlayer(var file: File, primarySpeaker: SourceDataLine?, secondarySpeaker: SourceDataLine?) :
-        Thread(file.toString()) {
+    private class ClipPlayer(
+        var file: File,
+        primarySpeaker: SourceDataLine?,
+        secondarySpeaker: SourceDataLine?
+    ) : Thread(file.toString()) {
 
         var primarySpeaker: SourceDataLine? = null
         var secondarySpeaker: SourceDataLine? = null
@@ -443,19 +437,19 @@ object Utils {
             PLAYALL = true
 
             var clip: AudioInputStream? = null
-            val clipformat: AudioFormat?
+            val audioFormat: AudioFormat?
 
             try {
                 clip = AudioSystem.getAudioInputStream(file)
-                clipformat = clip.format
+                audioFormat = clip.format
 
-                if (clipformat != format)
+                if (audioFormat != format)
                     clip = AudioSystem.getAudioInputStream(format, clip)
             } catch (e: UnsupportedAudioFileException) {
                 e.printStackTrace()
                 JOptionPane.showMessageDialog(
                     null,
-                    file.name + " uses an unsupported format.",
+                    "${file.name} uses an unsupported format.",
                     "Unsupported Format",
                     0
                 )
@@ -466,12 +460,12 @@ object Utils {
             if (clip != null) {
                 incrementCurrentClipCount()
 
-                val buffer = ByteArray(2048) // TODO: fix character
+                val buffer = ByteArray(BUFFERSIZE)
                 var bytesRead = 0
 
                 while (playing && PLAYALL) {
                     try {
-                        bytesRead = clip.read(buffer, 0, 2048)
+                        bytesRead = clip.read(buffer, 0, BUFFERSIZE)
                     } catch (e: IOException) {
                         e.printStackTrace()
                     }
@@ -483,7 +477,7 @@ object Utils {
                         secondarySpeaker?.write(buffer, 0, bytesRead)
                     }
 
-                    if (bytesRead < 2048) {
+                    if (bytesRead < BUFFERSIZE) {
                         playing = false
                     }
                 }

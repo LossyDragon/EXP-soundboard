@@ -4,6 +4,8 @@ import ca.exp.soundboard.rewrite.gui.SoundboardFrame
 import ca.exp.soundboard.rewrite.soundboard.Utils.decrementModSpeedDown
 import ca.exp.soundboard.rewrite.soundboard.Utils.incrementModSpeedUp
 import ca.exp.soundboard.rewrite.soundboard.Utils.isOverlapSameClipWhilePlaying
+import ca.exp.soundboard.rewrite.soundboard.Utils.stopAllClips
+import ca.exp.soundboard.rewrite.soundboard.Utils.submitNativeKeyPressTime
 import org.jnativehook.keyboard.NativeKeyEvent
 import org.jnativehook.keyboard.NativeKeyListener
 
@@ -15,9 +17,9 @@ class GlobalKeyMacroListener(
 
     val isSpeedModKeyHeld: Boolean
         get() {
-            val localIterator: Iterator<*> = pressedKeys.iterator()
+            val localIterator = pressedKeys.iterator()
             while (localIterator.hasNext()) {
-                val key = (localIterator.next() as Int).toInt()
+                val key = localIterator.next()
                 if (key == Utils.modifiedSpeedKey) {
                     return true
                 }
@@ -25,25 +27,24 @@ class GlobalKeyMacroListener(
             return false
         }
 
-    val pressedNativeKeys: ArrayList<Int>
+    val pressedNativeKeys: ArrayList<Int?>
         get() {
-            val array: ArrayList<Int> = arrayListOf()
+            val array: ArrayList<Int?> = arrayListOf()
             for (i in pressedKeys) {
                 array.add(i)
             }
-
             return array
         }
 
     override fun nativeKeyPressed(e: NativeKeyEvent) {
         val pressed = e.keyCode
-
-        Utils.submitNativeKeyPressTime(NativeKeyEvent.getKeyText(pressed), e.getWhen())
         var alreadyPressed = false
-        val localIterator: Iterator<*> = pressedKeys.iterator()
 
+        submitNativeKeyPressTime(NativeKeyEvent.getKeyText(pressed), e.getWhen())
+
+        val localIterator = pressedKeys.iterator()
         while (localIterator.hasNext()) {
-            val i = (localIterator.next() as Int).toInt()
+            val i = localIterator.next()
             if (pressed == i) {
                 alreadyPressed = true
                 break
@@ -55,7 +56,7 @@ class GlobalKeyMacroListener(
         }
 
         when (pressed) {
-            Utils.stopKey -> Utils.stopAllClips()
+            Utils.stopKey -> stopAllClips()
             Utils.modspeedupKey -> incrementModSpeedUp()
             Utils.modspeeddownKey -> decrementModSpeedDown()
             Utils.overlapSwitchKey -> {
@@ -86,7 +87,6 @@ class GlobalKeyMacroListener(
         }
 
         val potential: ArrayList<SoundboardEntry?> = arrayListOf()
-
         for (entry in SoundboardFrame.soundboard.soundboardEntries) {
             val actKeys = entry.activationKeys
             if (actKeys!!.isNotEmpty() && entry.matchesPressed(pressedKeys)) {
@@ -98,11 +98,10 @@ class GlobalKeyMacroListener(
             potential[0]!!.play(soundboardFrame.audioManager, modspeed)
         } else {
             var highest = 0
-            var potentialCopy = ArrayList(potential)
 
+            var potentialCopy = ArrayList(potential)
             for (p in potentialCopy) {
                 val matches = p!!.matchesHowManyPressed(pressedKeys)
-
                 if (matches > highest) {
                     highest = matches
                 } else if (matches < highest) {
@@ -111,10 +110,8 @@ class GlobalKeyMacroListener(
             }
 
             potentialCopy = ArrayList(potential)
-
             for (p in potentialCopy) {
                 val matches = p!!.matchesHowManyPressed(pressedKeys)
-
                 if (matches < highest) {
                     potential.remove(p)
                 }

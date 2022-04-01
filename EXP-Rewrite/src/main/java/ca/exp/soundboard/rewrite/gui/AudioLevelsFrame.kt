@@ -21,7 +21,6 @@ class AudioLevelsFrame : JFrame() {
         val lblMicInjectorGain = JLabel("Mic Injector Gain:")
         val lblPrimaryOutputGain = JLabel("Primary Output Gain:")
         val lblSecondaryOutputGain = JLabel("Secondary Output Gain:")
-        val separator = JSeparator().apply { foreground = Color.BLACK }
 
         val micInjectorGain = Utils.micInjectorGain.toInt()
         val primaryGain = AudioManager.getFirstOutputGain().toInt()
@@ -95,7 +94,7 @@ class AudioLevelsFrame : JFrame() {
                                         .addGroup(
                                             groupLayout
                                                 .createParallelGroup(GroupLayout.Alignment.LEADING)
-                                                .addComponent(separator, -1, 424, 32767)
+                                                .addComponent(jSeparator, -1, 424, 32767)
                                                 .addComponent(primarySlider, -1, 424, 32767)
                                                 .addComponent(lblPrimaryOutputGain)
                                                 .addComponent(lblSecondaryOutputGain)
@@ -135,7 +134,7 @@ class AudioLevelsFrame : JFrame() {
                         .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(primarySlider, -2, -1, -2)
                         .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(separator, -2, 2, -2)
+                        .addComponent(jSeparator, -2, 2, -2)
                         .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)
                         .addComponent(lblSecondaryOutputGain)
                         .addPreferredGap(LayoutStyle.ComponentPlacement.RELATED)

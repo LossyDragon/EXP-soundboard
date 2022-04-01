@@ -16,9 +16,7 @@ import java.io.File
 import java.net.URI
 import java.util.*
 import java.util.logging.Level
-import java.util.logging.LogManager
 import java.util.logging.Logger
-import java.util.prefs.Preferences
 import javax.swing.*
 import javax.swing.filechooser.FileFilter
 import javax.swing.table.DefaultTableModel
@@ -82,6 +80,7 @@ class SoundboardFrame : JFrame() {
         title = appTitle
         defaultCloseOperation = 3
 
+        // Is instance running on a mac?
         macInit()
 
         secondarySpeakerComboBox = JComboBox<String?>().apply {
@@ -345,7 +344,6 @@ class SoundboardFrame : JFrame() {
         Utils.stopAllClips()
         saveReminder()
 
-        // filechooser.setFileFilter(new JsonFileFilter(null));
         filechooser.fileFilter = JsonFileFilter()
 
         val session = filechooser.showOpenDialog(null)
@@ -365,7 +363,6 @@ class SoundboardFrame : JFrame() {
 
     private fun fileSaveAs() {
         val fc = JFileChooser()
-        // fc.setFileFilter(new JsonFileFilter(null));
         fc.fileFilter = JsonFileFilter()
         if (currentSoundboardFile != null) {
             fc.selectedFile = currentSoundboardFile
@@ -523,10 +520,10 @@ class SoundboardFrame : JFrame() {
             if (currentSoundboardFile!!.exists()) {
                 val gson = Gson()
                 val savedFile = Soundboard.loadFromJsonFile(currentSoundboardFile!!)
-                val savedjson = gson.toJson(savedFile)
-                val currentjson = gson.toJson(soundboard)
+                val savedJson = gson.toJson(savedFile)
+                val currentJson = gson.toJson(soundboard)
 
-                if (savedjson != currentjson) {
+                if (savedJson != currentJson) {
                     val option = JOptionPane.showConfirmDialog(
                         null,
                         "SoundboardStage has changed. Do you want to save?",
@@ -567,7 +564,9 @@ class SoundboardFrame : JFrame() {
         override fun accept(f: File): Boolean {
             return if (f.isDirectory) {
                 true
-            } else f.name.lowercase(Locale.getDefault()).endsWith(".json")
+            } else {
+                f.name.lowercase(Locale.getDefault()).endsWith(".json")
+            }
         }
 
         override fun getDescription(): String {
@@ -577,9 +576,9 @@ class SoundboardFrame : JFrame() {
 
     companion object {
         private const val VERSION = "0.5"
-
-        //        private const val OVERLAPSWITCHKEYKEY = "OverlapClipsKey"
         private const val appTitle = "EXP SoundboardStage vers. $VERSION | "
+
+//        private const val OVERLAPSWITCHKEYKEY = "OverlapClipsKey"
 //        private const val autoPPTKeysKey = "autoPTTkeys"
 //        private const val autoPPTenabledKey = "autoPPTenabled"
 //        private const val firstSpeakerKey = "firstSpeaker"
@@ -609,26 +608,10 @@ class SoundboardFrame : JFrame() {
 
         lateinit var filechooser: JFileChooser
 
-        @JvmField
         var micInjectorInputMixerName = ""
 
-        @JvmField
         var micInjectorOutputMixerName = ""
 
-        @JvmField
         var useMicInjector = false
-
-        @JvmStatic
-        fun main(args: Array<String>) {
-            // https://stackoverflow.com/a/30562956/13225929
-            LogManager.getLogManager().reset()
-            val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
-            logger.level = Level.OFF
-
-            Utils.initGlobalKeyLibrary()
-            // Utils.startMp3Decoder();
-
-            SoundboardFrame().isVisible = true
-        }
     }
 }
